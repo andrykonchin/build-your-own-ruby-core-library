@@ -1,33 +1,32 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
-require_relative 'shared/enumerable_enumeratorized'
 
-describe "Enumerable#slice_before" do
+RSpec.describe "Enumerable#slice_before" do
   before :each do
     @enum = EnumerableSpecs::Numerous.new(7,6,5,4,3,2,1)
   end
 
   describe "when given an argument and no block" do
-    it "calls === on the argument to determine when to yield" do
-      arg = mock "filter"
-      arg.should_receive(:===).and_return(false, true, false, false, false, true, false)
+    it "calls #=== on the argument to determine when to yield" do
+      arg = double "filter"
+      expect(arg).to receive(:===).and_return(false, true, false, false, false, true, false)
       e = @enum.slice_before(arg)
-      e.should be_an_instance_of(Enumerator)
-      e.to_a.should == [[7], [6, 5, 4, 3], [2, 1]]
+      expect(e).to be_an_instance_of(Enumerator)
+      expect(e.to_a).to eq([[7], [6, 5, 4, 3], [2, 1]])
     end
 
     it "doesn't yield an empty array if the filter matches the first entry or the last entry" do
-      arg = mock "filter"
-      arg.should_receive(:===).and_return(true).exactly(7)
+      arg = double "filter"
+      expect(arg).to receive(:===).exactly(7).and_return(true)
       e = @enum.slice_before(arg)
-      e.to_a.should == [[7], [6], [5], [4], [3], [2], [1]]
+      expect(e.to_a).to eq([[7], [6], [5], [4], [3], [2], [1]])
     end
 
     it "uses standard boolean as a test" do
-      arg = mock "filter"
-      arg.should_receive(:===).and_return(false, :foo, nil, false, false, 42, false)
+      arg = double "filter"
+      expect(arg).to receive(:===).and_return(false, :foo, nil, false, false, 42, false)
       e = @enum.slice_before(arg)
-      e.to_a.should == [[7], [6, 5, 4, 3], [2, 1]]
+      expect(e.to_a).to eq([[7], [6, 5, 4, 3], [2, 1]])
     end
   end
 
@@ -35,30 +34,56 @@ describe "Enumerable#slice_before" do
     describe "and no argument" do
       it "calls the block to determine when to yield" do
         e = @enum.slice_before{|i| i == 6 || i == 2}
-        e.should be_an_instance_of(Enumerator)
-        e.to_a.should == [[7], [6, 5, 4, 3], [2, 1]]
+        expect(e).to be_an_instance_of(Enumerator)
+        expect(e.to_a).to eq([[7], [6, 5, 4, 3], [2, 1]])
       end
     end
 
     it "does not accept arguments" do
-      -> {
+      expect {
         @enum.slice_before(1) {}
-      }.should raise_error(ArgumentError)
+      }.to raise_error(ArgumentError)
     end
   end
 
   it "raises an ArgumentError when given an incorrect number of arguments" do
-    -> { @enum.slice_before("one", "two") }.should raise_error(ArgumentError)
-    -> { @enum.slice_before }.should raise_error(ArgumentError)
+    expect { @enum.slice_before("one", "two") }.to raise_error(ArgumentError)
+    expect { @enum.slice_before }.to raise_error(ArgumentError)
   end
 
   describe "when an iterator method yields more than one value" do
     it "processes all yielded values" do
       enum = EnumerableSpecs::YieldsMulti.new
       result = enum.slice_before { |i| i == [3, 4, 5] }.to_a
-      result.should == [[[1, 2]], [[3, 4, 5], [6, 7, 8, 9]]]
+      expect(result).to eq([[[1, 2]], [[3, 4, 5], [6, 7, 8, 9]]])
     end
   end
 
-  it_behaves_like :enumerable_enumeratorized_with_unknown_size, [:slice_before, 3]
+  describe "Enumerable with size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        before do
+          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+        end
+
+        it "size returns nil" do
+          expect(@object.slice_before(3).size).to eq(nil)
+        end
+      end
+    end
+  end
+
+  describe "Enumerable with no size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        before do
+          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+        end
+
+        it "size returns nil" do
+          expect(@object.slice_before(3).size).to eq(nil)
+        end
+      end
+    end
+  end
 end

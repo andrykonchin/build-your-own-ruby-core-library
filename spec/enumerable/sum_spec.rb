@@ -1,7 +1,7 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
 
-describe 'Enumerable#sum' do
+RSpec.describe 'Enumerable#sum' do
   before :each do
     @enum = Object.new.to_enum
     class << @enum
@@ -15,16 +15,16 @@ describe 'Enumerable#sum' do
   end
 
   it 'returns amount of the elements with taking an argument as the initial value' do
-    @enum.sum(10).should == 35/3r
+    expect(@enum.sum(10)).to eq(35/3r)
   end
 
   it 'gives 0 as a default argument' do
-    @enum.sum.should == 5/3r
+    expect(@enum.sum).to eq(5/3r)
   end
 
   context 'with a block' do
     it 'transforms the elements' do
-      @enum.sum { |element| element * 2 }.should == 10/3r
+      expect(@enum.sum { |element| element * 2 }).to eq(10/3r)
     end
 
     it 'does not destructure array elements' do
@@ -35,7 +35,7 @@ describe 'Enumerable#sum' do
         end
       end
 
-      @enum.sum(&:last).should == 5
+      expect(@enum.sum(&:last)).to eq(5)
     end
   end
 
@@ -44,7 +44,7 @@ describe 'Enumerable#sum' do
   it "uses Kahan's compensated summation algorithm for precise sum of float numbers" do
     floats = [2.7800000000000002, 5.0, 2.5, 4.44, 3.89, 3.89, 4.44, 7.78, 5.0, 2.7800000000000002, 5.0, 2.5].to_enum
     naive_sum = floats.reduce { |sum, e| sum + e }
-    naive_sum.should == 50.00000000000001
-    floats.sum.should == 50.0
+    expect(naive_sum).to eq(50.00000000000001)
+    expect(floats.sum).to eq(50.0)
   end
 end

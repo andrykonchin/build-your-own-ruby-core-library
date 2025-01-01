@@ -1,7 +1,7 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
 
-describe "Enumerable#slice_when" do
+RSpec.describe "Enumerable#slice_when" do
   before :each do
     ary = [10, 9, 7, 6, 4, 3, 2, 1]
     @enum = EnumerableSpecs::Numerous.new(*ary)
@@ -11,11 +11,11 @@ describe "Enumerable#slice_when" do
 
   context "when given a block" do
     it "returns an enumerator" do
-      @result.should be_an_instance_of(Enumerator)
+      expect(@result).to be_an_instance_of(Enumerator)
     end
 
     it "splits chunks between adjacent elements i and j where the block returns true" do
-      @result.to_a.should == [[10, 9], [7, 6], [4, 3, 2, 1]]
+      expect(@result.to_a).to eq([[10, 9], [7, 6], [4, 3, 2, 1]])
     end
 
     it "calls the block for length of the receiver enumerable minus one times" do
@@ -24,22 +24,22 @@ describe "Enumerable#slice_when" do
         times_called += 1
         i - 1 != j
       end.to_a
-      times_called.should == (@enum_length - 1)
+      expect(times_called).to eq(@enum_length - 1)
     end
 
     it "doesn't yield an empty array if the block matches the first or the last time" do
-      @enum.slice_when { true }.to_a.should == [[10], [9], [7], [6], [4], [3], [2], [1]]
+      expect(@enum.slice_when { true }.to_a).to eq([[10], [9], [7], [6], [4], [3], [2], [1]])
     end
 
     it "doesn't yield an empty array on a small enumerable" do
-      EnumerableSpecs::Empty.new.slice_when { raise }.to_a.should == []
-      EnumerableSpecs::Numerous.new(42).slice_when { raise }.to_a.should == [[42]]
+      expect(EnumerableSpecs::Empty.new.slice_when { raise }.to_a).to eq([])
+      expect(EnumerableSpecs::Numerous.new(42).slice_when { raise }.to_a).to eq([[42]])
     end
   end
 
   context "when not given a block" do
     it "raises an ArgumentError" do
-      -> { @enum.slice_when }.should raise_error(ArgumentError)
+      expect { @enum.slice_when }.to raise_error(ArgumentError)
     end
   end
 
@@ -48,7 +48,7 @@ describe "Enumerable#slice_when" do
       def foo
         yield 1, 2
       end
-      to_enum(:foo).slice_when { true }.to_a.should == [[[1, 2]]]
+      expect(to_enum(:foo).slice_when { true }.to_a).to eq([[[1, 2]]])
     end
   end
 end

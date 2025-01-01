@@ -1,7 +1,7 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
 
-describe "Enumerable#grep_v" do
+RSpec.describe "Enumerable#grep_v" do
   before :each do
     @numerous = EnumerableSpecs::Numerous.new(*(0..9).to_a)
     def (@odd_matcher = BasicObject.new).===(obj)
@@ -12,65 +12,65 @@ describe "Enumerable#grep_v" do
   it "sets $~ in the block" do
     "z" =~ /z/ # Reset $~
     ["abc", "def"].grep_v(/e/) { |e|
-      e.should == "abc"
-      $~.should == nil
+      expect(e).to eq("abc")
+      expect($~).to eq(nil)
     }
 
     # Set by the match of "def"
-    $&.should == "e"
+    expect($&).to eq("e")
   end
 
   it "does not set $~ when given no block" do
     "z" =~ /z/ # Reset $~
-    ["abc", "def"].grep_v(/e/).should == ["abc"]
-    $&.should == "z"
+    expect(["abc", "def"].grep_v(/e/)).to eq(["abc"])
+    expect($&).to eq("z")
   end
 
   it "does not modify Regexp.last_match without block" do
     "z" =~ /z/ # Reset last match
-    ["abc", "def"].grep_v(/e/).should == ["abc"]
-    Regexp.last_match[0].should == "z"
+    expect(["abc", "def"].grep_v(/e/)).to eq(["abc"])
+    expect(Regexp.last_match[0]).to eq("z")
   end
 
   it "correctly handles non-string elements" do
     'set last match' =~ /set last (.*)/
-    [:a, 'b', 'z', :c, 42, nil].grep_v(/[a-d]/).should == ['z', 42, nil]
-    $1.should == 'match'
+    expect([:a, 'b', 'z', :c, 42, nil].grep_v(/[a-d]/)).to eq(['z', 42, nil])
+    expect($1).to eq('match')
 
     o = Object.new
     def o.to_str
       'hello'
     end
-    [o].grep_v(/mm/).first.should.equal?(o)
+    expect([o].grep_v(/mm/).first).to equal(o)
   end
 
   describe "without block" do
     it "returns an Array of matched elements" do
-      @numerous.grep_v(@odd_matcher).should == [0, 2, 4, 6, 8]
+      expect(@numerous.grep_v(@odd_matcher)).to eq([0, 2, 4, 6, 8])
     end
 
     it "compares pattern with gathered array when yielded with multiple arguments" do
-      (unmatcher = Object.new).stub!(:===).and_return(false)
-      EnumerableSpecs::YieldsMixed2.new.grep_v(unmatcher).should == EnumerableSpecs::YieldsMixed2.gathered_yields
+      unmatcher = double("===": false)
+      expect(EnumerableSpecs::YieldsMixed2.new.grep_v(unmatcher)).to eq(EnumerableSpecs::YieldsMixed2.gathered_yields)
     end
 
     it "raises an ArgumentError when not given a pattern" do
-      -> { @numerous.grep_v }.should raise_error(ArgumentError)
+      expect { @numerous.grep_v }.to raise_error(ArgumentError)
     end
   end
 
   describe "with block" do
     it "returns an Array of matched elements that mapped by the block" do
-      @numerous.grep_v(@odd_matcher) { |n| n * 2 }.should == [0, 4, 8, 12, 16]
+      expect(@numerous.grep_v(@odd_matcher) { |n| n * 2 }).to eq([0, 4, 8, 12, 16])
     end
 
     it "calls the block with gathered array when yielded with multiple arguments" do
-      (unmatcher = Object.new).stub!(:===).and_return(false)
-      EnumerableSpecs::YieldsMixed2.new.grep_v(unmatcher){ |e| e }.should == EnumerableSpecs::YieldsMixed2.gathered_yields
+      unmatcher = double("===": false)
+      expect(EnumerableSpecs::YieldsMixed2.new.grep_v(unmatcher){ |e| e }).to eq(EnumerableSpecs::YieldsMixed2.gathered_yields)
     end
 
     it "raises an ArgumentError when not given a pattern" do
-      -> { @numerous.grep_v { |e| e } }.should raise_error(ArgumentError)
+      expect { @numerous.grep_v { |e| e } }.to raise_error(ArgumentError)
     end
   end
 end

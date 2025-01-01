@@ -1,7 +1,7 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
 
-describe "Enumerable#grep" do
+RSpec.describe "Enumerable#grep" do
   before :each do
     @a = EnumerableSpecs::EachDefiner.new( 2, 4, 6, 8, 10)
   end
@@ -9,59 +9,59 @@ describe "Enumerable#grep" do
   it "grep without a block should return an array of all elements === pattern" do
     class EnumerableSpecGrep; def ===(obj); obj == '2'; end; end
 
-    EnumerableSpecs::Numerous.new('2', 'a', 'nil', '3', false).grep(EnumerableSpecGrep.new).should == ['2']
+    expect(EnumerableSpecs::Numerous.new('2', 'a', 'nil', '3', false).grep(EnumerableSpecGrep.new)).to eq(['2'])
   end
 
   it "grep with a block should return an array of elements === pattern passed through block" do
     class EnumerableSpecGrep2; def ===(obj); /^ca/ =~ obj; end; end
 
-    EnumerableSpecs::Numerous.new("cat", "coat", "car", "cadr", "cost").grep(EnumerableSpecGrep2.new) { |i| i.upcase }.should == ["CAT", "CAR", "CADR"]
+    expect(EnumerableSpecs::Numerous.new("cat", "coat", "car", "cadr", "cost").grep(EnumerableSpecGrep2.new) { |i| i.upcase }).to eq(["CAT", "CAR", "CADR"])
   end
 
   it "grep the enumerable (rubycon legacy)" do
-    EnumerableSpecs::EachDefiner.new().grep(1).should == []
-    @a.grep(3..7).should == [4,6]
-    @a.grep(3..7) {|a| a+1}.should == [5,7]
+    expect(EnumerableSpecs::EachDefiner.new().grep(1)).to eq([])
+    expect(@a.grep(3..7)).to eq([4,6])
+    expect(@a.grep(3..7) {|a| a+1}).to eq([5,7])
   end
 
   it "can use $~ in the block when used with a Regexp" do
     ary = ["aba", "aba"]
-    ary.grep(/a(b)a/) { $1 }.should == ["b", "b"]
+    expect(ary.grep(/a(b)a/) { $1 }).to eq(["b", "b"])
   end
 
   it "sets $~ in the block" do
     "z" =~ /z/ # Reset $~
     ["abc", "def"].grep(/b/) { |e|
-      e.should == "abc"
-      $&.should == "b"
+      expect(e).to eq("abc")
+      expect($&).to eq("b")
     }
 
     # Set by the failed match of "def"
-    $~.should == nil
+    expect($~).to eq(nil)
   end
 
   it "does not set $~ when given no block" do
     "z" =~ /z/ # Reset $~
-    ["abc", "def"].grep(/b/).should == ["abc"]
-    $&.should == "z"
+    expect(["abc", "def"].grep(/b/)).to eq(["abc"])
+    expect($&).to eq("z")
   end
 
   it "does not modify Regexp.last_match without block" do
     "z" =~ /z/ # Reset last match
-    ["abc", "def"].grep(/b/).should == ["abc"]
-    Regexp.last_match[0].should == "z"
+    expect(["abc", "def"].grep(/b/)).to eq(["abc"])
+    expect(Regexp.last_match[0]).to eq("z")
   end
 
   it "correctly handles non-string elements" do
     'set last match' =~ /set last (.*)/
-    [:a, 'b', 'z', :c, 42, nil].grep(/[a-d]/).should == [:a, 'b', :c]
-    $1.should == 'match'
+    expect([:a, 'b', 'z', :c, 42, nil].grep(/[a-d]/)).to eq([:a, 'b', :c])
+    expect($1).to eq('match')
 
     o = Object.new
     def o.to_str
       'hello'
     end
-    [o].grep(/ll/).first.should.equal?(o)
+    expect([o].grep(/ll/).first).to equal(o)
   end
 
   describe "with a block" do
@@ -73,15 +73,15 @@ describe "Enumerable#grep" do
     end
 
     it "returns an Array of matched elements that mapped by the block" do
-      @numerous.grep(@odd_matcher) { |n| n * 2 }.should == [2, 6, 10, 14, 18]
+      expect(@numerous.grep(@odd_matcher) { |n| n * 2 }).to eq([2, 6, 10, 14, 18])
     end
 
     it "calls the block with gathered array when yielded with multiple arguments" do
-      EnumerableSpecs::YieldsMixed2.new.grep(Object){ |e| e }.should == EnumerableSpecs::YieldsMixed2.gathered_yields
+      expect(EnumerableSpecs::YieldsMixed2.new.grep(Object){ |e| e }).to eq(EnumerableSpecs::YieldsMixed2.gathered_yields)
     end
 
     it "raises an ArgumentError when not given a pattern" do
-      -> { @numerous.grep { |e| e } }.should raise_error(ArgumentError)
+      expect { @numerous.grep { |e| e } }.to raise_error(ArgumentError)
     end
   end
 end
