@@ -1,7 +1,7 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
 
-describe "Enumerable#chunk_while" do
+RSpec.describe "Enumerable#chunk_while" do
   before :each do
     ary = [10, 9, 7, 6, 4, 3, 2, 1]
     @enum = EnumerableSpecs::Numerous.new(*ary)
@@ -11,11 +11,11 @@ describe "Enumerable#chunk_while" do
 
   context "when given a block" do
     it "returns an enumerator" do
-      @result.should be_an_instance_of(Enumerator)
+      expect(@result).to be_an_instance_of(Enumerator)
     end
 
     it "splits chunks between adjacent elements i and j where the block returns false" do
-      @result.to_a.should == [[10, 9], [7, 6], [4, 3, 2, 1]]
+      expect(@result.to_a).to eq [[10, 9], [7, 6], [4, 3, 2, 1]]
     end
 
     it "calls the block for length of the receiver enumerable minus one times" do
@@ -24,19 +24,19 @@ describe "Enumerable#chunk_while" do
         times_called += 1
         i - 1 == j
       end.to_a
-      times_called.should == (@enum_length - 1)
+      expect(times_called).to eq(@enum_length - 1)
     end
   end
 
   context "when not given a block" do
     it "raises an ArgumentError" do
-      -> { @enum.chunk_while }.should raise_error(ArgumentError)
+      expect { @enum.chunk_while }.to raise_error(ArgumentError)
     end
   end
 
   context "on a single-element array" do
     it "ignores the block and returns an enumerator that yields [element]" do
-      [1].chunk_while {|x| x.even?}.to_a.should == [[1]]
+      expect([1].chunk_while {|x| x.even?}.to_a).to eq [[1]]
     end
   end
 end

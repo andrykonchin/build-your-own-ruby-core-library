@@ -1,8 +1,7 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
-require_relative 'shared/enumerable_enumeratorized'
 
-describe "Enumerable#each_entry" do
+RSpec.describe "Enumerable#each_entry" do
   before :each do
     ScratchPad.record []
     @enum = EnumerableSpecs::YieldsMixed.new
@@ -11,31 +10,57 @@ describe "Enumerable#each_entry" do
 
   it "yields multiple arguments as an array" do
     acc = []
-    @enum.each_entry {|g| acc << g}.should equal(@enum)
-    acc.should == @entries
+    expect(@enum.each_entry {|g| acc << g}).to equal(@enum)
+    expect(acc).to eq(@entries)
   end
 
   it "returns an enumerator if no block" do
     e = @enum.each_entry
-    e.should be_an_instance_of(Enumerator)
-    e.to_a.should == @entries
+    expect(e).to be_an_instance_of(Enumerator)
+    expect(e.to_a).to eq(@entries)
   end
 
   it "passes through the values yielded by #each_with_index" do
     [:a, :b].each_with_index.each_entry { |x, i| ScratchPad << [x, i] }
-    ScratchPad.recorded.should == [[:a, 0], [:b, 1]]
+    expect(ScratchPad.recorded).to eq([[:a, 0], [:b, 1]])
   end
 
   it "raises an ArgumentError when extra arguments" do
-    -> { @enum.each_entry("one").to_a   }.should raise_error(ArgumentError)
-    -> { @enum.each_entry("one"){}.to_a }.should raise_error(ArgumentError)
+    expect { @enum.each_entry("one").to_a   }.to raise_error(ArgumentError)
+    expect { @enum.each_entry("one"){}.to_a }.to raise_error(ArgumentError)
   end
 
   it "passes extra arguments to #each" do
     enum = EnumerableSpecs::EachCounter.new(1, 2)
-    enum.each_entry(:foo, "bar").to_a.should == [1,2]
-    enum.arguments_passed.should == [:foo, "bar"]
+    expect(enum.each_entry(:foo, "bar").to_a).to eq([1,2])
+    expect(enum.arguments_passed).to eq([:foo, "bar"])
   end
 
-  it_behaves_like :enumerable_enumeratorized_with_origin_size, :each_entry
+  describe "Enumerable with size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        before do
+          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+        end
+
+        it "size returns the enumerable size" do
+          expect(@object.each_entry.size).to eq(@object.size)
+        end
+      end
+    end
+  end
+
+  describe "Enumerable with no size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        before do
+          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+        end
+
+        it "size returns nil" do
+          expect(@object.each_entry.size).to eq(nil)
+        end
+      end
+    end
+  end
 end

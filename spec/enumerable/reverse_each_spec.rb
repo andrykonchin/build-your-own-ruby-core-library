@@ -1,26 +1,51 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
-require_relative 'shared/enumerable_enumeratorized'
 
-describe "Enumerable#reverse_each" do
+RSpec.describe "Enumerable#reverse_each" do
   it "traverses enum in reverse order and pass each element to block" do
     a=[]
     EnumerableSpecs::Numerous.new.reverse_each { |i| a << i }
-    a.should == [4, 1, 6, 3, 5, 2]
+    expect(a).to eq([4, 1, 6, 3, 5, 2])
   end
 
   it "returns an Enumerator if no block given" do
     enum = EnumerableSpecs::Numerous.new.reverse_each
-    enum.should be_an_instance_of(Enumerator)
-    enum.to_a.should == [4, 1, 6, 3, 5, 2]
+    expect(enum).to be_an_instance_of(Enumerator)
+    expect(enum.to_a).to eq([4, 1, 6, 3, 5, 2])
   end
 
   it "gathers whole arrays as elements when each yields multiple" do
     multi = EnumerableSpecs::YieldsMulti.new
     yielded = []
     multi.reverse_each {|e| yielded << e }
-    yielded.should == [[6, 7, 8, 9], [3, 4, 5], [1, 2]]
+    expect(yielded).to eq([[6, 7, 8, 9], [3, 4, 5], [1, 2]])
   end
 
-  it_behaves_like :enumerable_enumeratorized_with_origin_size, :reverse_each
+  describe "Enumerable with size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        before do
+          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+        end
+
+        it "size returns the enumerable size" do
+          expect(@object.reverse_each.size).to eq(@object.size)
+        end
+      end
+    end
+  end
+
+  describe "Enumerable with no size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        before do
+          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+        end
+
+        it "size returns nil" do
+          expect(@object.reverse_each.size).to eq(nil)
+        end
+      end
+    end
+  end
 end
