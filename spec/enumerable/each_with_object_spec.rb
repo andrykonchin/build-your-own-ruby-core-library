@@ -1,8 +1,7 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
-require_relative 'shared/enumerable_enumeratorized'
 
-describe "Enumerable#each_with_object" do
+RSpec.describe "Enumerable#each_with_object" do
   before :each do
     @values = [2, 5, 3, 6, 1, 4]
     @enum = EnumerableSpecs::Numerous.new(*@values)
@@ -11,31 +10,59 @@ describe "Enumerable#each_with_object" do
 
   it "passes each element and its argument to the block" do
     acc = []
-    @enum.each_with_object(@initial) do |elem, obj|
-      obj.should equal(@initial)
+    expect(@enum.each_with_object(@initial) do |elem, obj|
+      expect(obj).to equal(@initial)
       obj = 42
       acc << elem
-    end.should equal(@initial)
-    acc.should == @values
+    end).to equal(@initial)
+    expect(acc).to eq(@values)
   end
 
   it "returns an enumerator if no block" do
     acc = []
     e = @enum.each_with_object(@initial)
-    e.each do |elem, obj|
-      obj.should equal(@initial)
-      obj = 42
-      acc << elem
-    end.should equal(@initial)
-    acc.should == @values
+    expect(
+      e.each do |elem, obj|
+        expect(obj).to equal(@initial)
+        obj = 42
+        acc << elem
+      end
+    ).to equal(@initial)
+    expect(acc).to eq(@values)
   end
 
   it "gathers whole arrays as elements when each yields multiple" do
     multi = EnumerableSpecs::YieldsMulti.new
     array = []
     multi.each_with_object(array) { |elem, obj| obj << elem }
-    array.should == [[1, 2], [3, 4, 5], [6, 7, 8, 9]]
+    expect(array).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
   end
 
-  it_behaves_like :enumerable_enumeratorized_with_origin_size, [:each_with_object, []]
+  describe "Enumerable with size" do
+    before :all do
+      @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+    end
+
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        it "size returns the enumerable size" do
+          expect(@object.each_with_object([]).size).to eq(@object.size)
+        end
+      end
+    end
+  end
+
+  describe "Enumerable with no size" do
+    before :all do
+      @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    end
+
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        it "size returns nil" do
+          expect(@object.each_with_object([]).size).to eq(nil)
+        end
+      end
+    end
+  end
 end

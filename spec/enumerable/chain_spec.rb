@@ -1,7 +1,7 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
 require_relative 'fixtures/classes'
 
-describe "Enumerable#chain" do
+RSpec.describe "Enumerable#chain" do
   before :each do
     ScratchPad.record []
   end
@@ -14,10 +14,10 @@ describe "Enumerable#chain" do
     chain = one.chain(two, three)
 
     chain.each { |item| ScratchPad << item }
-    ScratchPad.recorded.should == [1, 2, 3, 4, 5, 6]
+    expect(ScratchPad.recorded).to eq [1, 2, 3, 4, 5, 6]
   end
 
-  it "returns an Enumerator::Chain if given a block" do
-    EnumerableSpecs::Numerous.new.chain.should be_an_instance_of(Enumerator::Chain)
+  it "returns an Enumerator::Chain" do
+    expect(EnumerableSpecs::Numerous.new.chain).to be_an_instance_of(Enumerator::Chain)
   end
 end
