@@ -1,13 +1,13 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-  it 'returns an array that contains only unique elements' do
 RSpec.describe 'Enumerable#uniq' do
-    expect([0, 1, 2, 3].to_enum.uniq { |n| n.even? }).to eq([0, 1])
+  it 'returns an array that contains only unique elements' do
+    expect(EnumerableSpecs::Numerous.new(0, 1, 2, 3).to_enum.uniq { |n| n.even? }).to eq([0, 1])
   end
 
   it "uses eql? semantics" do
-    expect([1.0, 1].to_enum.uniq).to eq([1.0, 1])
+    expect(EnumerableSpecs::Numerous.new(1.0, 1).to_enum.uniq).to eq([1.0, 1])
   end
 
   it "compares elements first with hash" do
@@ -16,7 +16,7 @@ RSpec.describe 'Enumerable#uniq' do
     y = double('0')
     expect(y).to receive(:hash).at_least(1).and_return(0)
 
-    expect([x, y].to_enum.uniq).to eq([x, y])
+    expect(EnumerableSpecs::Numerous.new(x, y).to_enum.uniq).to eq([x, y])
   end
 
   it "does not compare elements with different hash codes via eql?" do
@@ -28,35 +28,25 @@ RSpec.describe 'Enumerable#uniq' do
     expect(x).to receive(:hash).at_least(1).and_return(0)
     expect(y).to receive(:hash).at_least(1).and_return(1)
 
-    expect([x, y].to_enum.uniq).to eq([x, y])
+    expect(EnumerableSpecs::Numerous.new(x, y).to_enum.uniq).to eq([x, y])
   end
 
   it "compares elements with matching hash codes with #eql?" do
-    a = Array.new(2) do
-      obj = double('0')
-      expect(obj).to receive(:hash).at_least(1).and_return(0)
+    a = double('a', 'eql?': false)
+    b = double('b', 'eql?': false)
+    enum = EnumerableSpecs::Numerous.new(a, b)
 
-      def obj.eql?(o)
-        false
-      end
+    expect(a).to receive(:hash).at_least(1).and_return(0)
+    expect(b).to receive(:hash).at_least(1).and_return(0)
+    expect(enum.uniq).to eq([a, b])
 
-      obj
-    end
+    a = double('a', 'eql?': true)
+    b = double('b', 'eql?': true)
+    enum = EnumerableSpecs::Numerous.new(a, b)
 
-    expect(a.uniq).to eq(a)
-
-    a = Array.new(2) do
-      obj = double('0')
-      expect(obj).to receive(:hash).at_least(1).and_return(0)
-
-      def obj.eql?(o)
-        true
-      end
-
-      obj
-    end
-
-    expect(a.to_enum.uniq.size).to eq(1)
+    expect(a).to receive(:hash).at_least(1).and_return(0)
+    expect(b).to receive(:hash).at_least(1).and_return(0)
+    expect(enum.uniq.size).to eq(1)
   end
 
   context 'when yielded with multiple arguments' do

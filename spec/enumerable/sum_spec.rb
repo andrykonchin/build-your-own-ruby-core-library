@@ -3,15 +3,7 @@ require_relative 'fixtures/classes'
 
 RSpec.describe 'Enumerable#sum' do
   before :each do
-    @enum = Object.new.to_enum
-    class << @enum
-      def each
-        yield 0
-        yield(-1)
-        yield 2
-        yield 2/3r
-      end
-    end
+    @enum = EnumerableSpecs::Numerous.new(0, -1, 2, 2/3r)
   end
 
   it 'returns amount of the elements with taking an argument as the initial value' do
