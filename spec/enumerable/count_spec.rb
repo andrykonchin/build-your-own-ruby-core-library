@@ -1,59 +1,50 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#count" do
-  before :each do
-    @elements = [1, 2, 4, 2]
-    @numerous = EnumerableSpecs::Numerous.new(*@elements)
+RSpec.describe 'Enumerable#count' do
+  it 'returns the count of elements' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.count).to eq(4)
   end
 
-  describe "when no argument or a block" do
-    it "returns size" do
-      expect(@numerous.count).to eq(4)
+  it 'ignores the #size method' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    def enum.size = :foo
+    expect(enum.count).to eq(4)
+  end
+
+  context 'given an argument' do
+    it 'returns the number of elements that equal an argument' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4, 4)
+      expect(enum.count(4)).to eq(2)
     end
 
-    describe "with a custom size method" do
-      before :each do
-        class << @numerous
-          def size
-            :any_object
-          end
-        end
-      end
+    it 'compares an argument with elements using #==' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4, 4)
+      object = EnumerableSpecs::Equals.new(4)
+      expect(enum.count(object)).to eq(2)
+    end
 
-      it "ignores the custom size method" do
-        expect(@numerous.count).to eq(4)
-      end
+    it 'ignores the block' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4, 4)
+
+      expect {
+        expect(enum.count(4) { raise }).to eq(2) # rubocop:disable Lint/UnreachableLoop
+      }.to complain(/given block not used/)
     end
   end
 
-  it "counts nils if given nil as an argument" do
-    expect(EnumerableSpecs::Numerous.new(nil, nil, nil, false).count(nil)).to eq(3)
-  end
+  context 'given a block' do
+    it 'uses a block for comparison' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4, 5, 6)
+      expect(enum.count { |i| i.even? }).to eq(3)
+    end
 
-  it "accepts an argument for comparison using ==" do
-    expect(@numerous.count(2)).to eq(2)
-  end
-
-  it "uses a block for comparison" do
-    expect(@numerous.count{|x| x%2==0 }).to eq(3)
-  end
-
-  it "ignores the block when given an argument" do
-    expect {
-      expect(@numerous.count(4){|x| x%2==0 }).to eq(1)
-    }.to complain(/given block not used/)
-  end
-
-  describe "when each yields multiple values" do
-    it "gathers initial args as elements" do
+    it 'yields multiple arguments when #each yields multiple values' do
       multi = EnumerableSpecs::YieldsMulti.new
-      expect(multi.count {|e| e == 1 }).to eq(1)
-    end
-
-    it "accepts an argument for comparison using ==" do
-      multi = EnumerableSpecs::YieldsMulti.new
-      expect(multi.count([1, 2])).to eq(1)
+      yielded = []
+      multi.count { |*args| yielded << args }
+      expect(yielded).to contain_exactly([1, 2], [3, 4, 5], [6, 7, 8, 9])
     end
   end
 end

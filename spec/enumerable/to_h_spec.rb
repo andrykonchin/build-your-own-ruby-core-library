@@ -1,93 +1,97 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#to_h" do
-  it "converts empty enumerable to empty hash" do
-    enum = EnumerableSpecs::EachDefiner.new
+RSpec.describe 'Enumerable#to_h' do
+  it 'converts empty enumerable to empty Hash' do
+    enum = EnumerableSpecs::Empty.new
     expect(enum.to_h).to eq({})
   end
 
-  it "converts yielded [key, value] pairs to a hash" do
-    enum = EnumerableSpecs::EachDefiner.new([:a, 1], [:b, 2])
+  it 'converts elements that are [key, value] pairs into a Hash' do
+    enum = EnumerableSpecs::Numerous.new([:a, 1], [:b, 2])
     expect(enum.to_h).to eq({ a: 1, b: 2 })
   end
 
-  it "uses the last value of a duplicated key" do
-    enum = EnumerableSpecs::EachDefiner.new([:a, 1], [:b, 2], [:a, 3])
+  it 'uses the last value of a duplicated key' do
+    enum = EnumerableSpecs::Numerous.new([:a, 1], [:b, 2], [:a, 3])
     expect(enum.to_h).to eq({ a: 3, b: 2 })
   end
 
-  it "calls #to_ary on contents" do
-    pair = double('to_ary')
-    expect(pair).to receive(:to_ary).and_return([:b, 2])
-    enum = EnumerableSpecs::EachDefiner.new([:a, 1], pair)
+  it 'calls #to_ary on elements' do
+    pair = double('array')
+    allow(pair).to receive(:to_ary).and_return([:b, 2])
+    enum = EnumerableSpecs::Numerous.new([:a, 1], pair)
     expect(enum.to_h).to eq({ a: 1, b: 2 })
   end
 
-  it "forwards arguments to #each" do
-    enum = Object.new
-    def enum.each(*args)
-      yield(*args)
-      yield([:b, 2])
-    end
-    enum.extend Enumerable
-    expect(enum.to_h(:a, 1)).to eq({ a: 1, b: 2 })
+  it 'passes extra arguments to #each' do
+    enum = EnumerableSpecs::EachWithParameters.new([1, 2], [3, 4])
+    enum.to_h(:hello, 'world')
+    expect(enum.arguments_passed).to eq([:hello, 'world'])
   end
 
-  it "raises TypeError if an element is not an array" do
-    enum = EnumerableSpecs::EachDefiner.new(:x)
-    expect { enum.to_h }.to raise_error(TypeError)
+  it 'raises TypeError if an element is not an Array' do
+    enum = EnumerableSpecs::Numerous.new(:x)
+    expect { enum.to_h }.to raise_error(TypeError, 'wrong element type Symbol (expected array)')
   end
 
-  it "raises ArgumentError if an element is not a [key, value] pair" do
-    enum = EnumerableSpecs::EachDefiner.new([:x])
-    expect { enum.to_h }.to raise_error(ArgumentError)
+  it 'raises ArgumentError if an element size is less than 2' do
+    enum = EnumerableSpecs::Numerous.new([:x])
+    expect { enum.to_h }.to raise_error(ArgumentError, 'element has wrong array length (expected 2, was 1)')
   end
 
-  context "with block" do
-    before do
-      @enum = EnumerableSpecs::EachDefiner.new(:a, :b)
+  it 'raises ArgumentError if an element size is greater than 2' do
+    enum = EnumerableSpecs::Numerous.new(%i[a b c])
+    expect { enum.to_h }.to raise_error(ArgumentError, 'element has wrong array length (expected 2, was 3)')
+  end
+
+  context 'given a block' do
+    it 'converts [key, value] pairs returned by the block into a Hash' do
+      enum = EnumerableSpecs::Numerous.new(:a, :b)
+      expect(enum.to_h { |k| [k, k.to_s] }).to eq({ a: 'a', b: 'b' })
     end
 
-    it "converts [key, value] pairs returned by the block to a hash" do
-      expect(@enum.to_h { |k| [k, k.to_s] }).to eq({ a: 'a', b: 'b' })
+    it 'yields multiple arguments when #each yields multiple values' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.to_h { |*args| yielded << args; [:a, 1] }
+      expect(yielded).to contain_exactly([1, 2], [3, 4, 5], [6, 7, 8, 9])
     end
 
-    it "passes to a block each element as a single argument" do
-      enum_of_arrays = EnumerableSpecs::EachDefiner.new([:a, 1], [:b, 2])
+    it 'raises ArgumentError if block returns longer or shorter Array' do
+      enum = EnumerableSpecs::Numerous.new
 
-      ScratchPad.record []
-      enum_of_arrays.to_h { |*args| ScratchPad << args; [args[0], args[1]] }
-      expect(ScratchPad.recorded.sort).to eq([[[:a, 1]], [[:b, 2]]])
+      expect {
+        enum.to_h { |k| [k, k, k] }
+      }.to raise_error(ArgumentError, 'element has wrong array length (expected 2, was 3)')
+
+      expect {
+        enum.to_h { |k| [k] }
+      }.to raise_error(ArgumentError, 'element has wrong array length (expected 2, was 1)')
     end
 
-    it "raises ArgumentError if block returns longer or shorter array" do
-      expect do
-        @enum.to_h { |k| [k, k.to_s, 1] }
-      end.to raise_error(ArgumentError, /element has wrong array length/)
+    it 'raises TypeError if block returns something other than Array' do
+      enum = EnumerableSpecs::Numerous.new
 
-      expect do
-        @enum.to_h { |k| [k] }
-      end.to raise_error(ArgumentError, /element has wrong array length/)
+      expect {
+        enum.to_h { 'not-array' }
+      }.to raise_error(TypeError, 'wrong element type String (expected array)')
     end
 
-    it "raises TypeError if block returns something other than Array" do
-      expect do
-        @enum.to_h { |k| "not-array" }
-      end.to raise_error(TypeError, /wrong element type String/)
-    end
+    it 'coerces returned pair to Array with #to_ary' do
+      enum = EnumerableSpecs::Numerous.new
 
-    it "coerces returned pair to Array with #to_ary" do
       x = double('x', to_ary: [:b, 'b'])
-      expect(@enum.to_h { |k| x }).to eq({ :b => 'b' })
+      expect(enum.to_h { x }).to eq({ b: 'b' })
     end
 
-    it "does not coerce returned pair to Array with #to_a" do
+    it 'does not coerce returned pair to Array with #to_a' do
+      enum = EnumerableSpecs::Numerous.new
       x = double('x', to_a: [:b, 'b'])
 
-      expect do
-        @enum.to_h { |k| x }
-      end.to raise_error(TypeError, /wrong element type RSpec::Mocks::Double/)
+      expect {
+        enum.to_h { x }
+      }.to raise_error(TypeError, 'wrong element type RSpec::Mocks::Double (expected array)')
     end
   end
 end

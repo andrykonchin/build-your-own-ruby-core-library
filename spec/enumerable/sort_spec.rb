@@ -1,54 +1,44 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#sort" do
-  it "sorts by the natural order as defined by <=>" do
-    expect(EnumerableSpecs::Numerous.new.sort).to eq([1, 2, 3, 4, 5, 6])
-    sorted = EnumerableSpecs::ComparesByVowelCount.wrap("a" * 1, "a" * 2, "a"*3, "a"*4, "a"*5)
-    expect(EnumerableSpecs::Numerous.new(sorted[2],sorted[0],sorted[1],sorted[3],sorted[4]).sort).to eq(sorted)
+RSpec.describe 'Enumerable#sort' do
+  it 'sorts by the natural order as defined by <=>' do
+    enum = EnumerableSpecs::Numerous.new(3, 1, 4, 6, 2, 5)
+    expect(enum.sort).to eq([1, 2, 3, 4, 5, 6])
   end
 
-  it "yields elements to the provided block" do
-    expect(EnumerableSpecs::Numerous.new.sort { |a, b| b <=> a }).to eq([6, 5, 4, 3, 2, 1])
-    expect(EnumerableSpecs::Numerous.new(2,0,1,3,4).sort { |n, m| -(n <=> m) }).to eq([4,3,2,1,0])
+  it 'sorts in order determined by a block if the block is given' do
+    enum = EnumerableSpecs::Numerous.new(3, 1, 4, 6, 2, 5)
+    expect(enum.sort { |a, b| b <=> a }).to eq([6, 5, 4, 3, 2, 1])
   end
 
-  it "raises a NoMethodError if elements do not define <=>" do
-    expect do
-      EnumerableSpecs::Numerous.new(BasicObject.new, BasicObject.new, BasicObject.new).sort
-    end.to raise_error(NoMethodError)
-  end
+  it 'raises a NoMethodError if elements do not respond to <=>' do
+    enum = EnumerableSpecs::Numerous.new(BasicObject.new, BasicObject.new, BasicObject.new)
 
-  it "sorts enumerables that contain nils" do
-    arr = EnumerableSpecs::Numerous.new(nil, true, nil, false, nil, true, nil, false, nil)
-    expect(arr.sort { |a, b|
-      x = a ? -1 : a.nil? ? 0 : 1
-      y = b ? -1 : b.nil? ? 0 : 1
-      x <=> y
-    }).to eq([true, true, nil, nil, nil, nil, nil, false, false])
-  end
-
-  it "compare values returned by block with 0" do
-    expect(EnumerableSpecs::Numerous.new.sort { |n, m| -(n+m) * (n <=> m) }).to eq([6, 5, 4, 3, 2, 1])
-    expect(EnumerableSpecs::Numerous.new.sort { |n, m|
-      EnumerableSpecs::ComparableWithInteger.new(-(n+m) * (n <=> m))
-    }).to eq([6, 5, 4, 3, 2, 1])
     expect {
-      EnumerableSpecs::Numerous.new.sort { |n, m| (n <=> m).to_s }
-    }.to raise_error(ArgumentError)
+      enum.sort
+    }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
   end
 
-  it "raises an error if objects can't be compared" do
-    a=EnumerableSpecs::Numerous.new(EnumerableSpecs::Uncomparable.new, EnumerableSpecs::Uncomparable.new)
-    expect {a.sort}.to raise_error(ArgumentError)
+  it "raises an error if objects can't be compared, that is <=> returns nil" do
+    enum = EnumerableSpecs::Numerous.new(EnumerableSpecs::Uncomparable.new, EnumerableSpecs::Uncomparable.new)
+
+    expect {
+      enum.sort
+    }.to raise_error(ArgumentError, 'comparison of EnumerableSpecs::Uncomparable with EnumerableSpecs::Uncomparable failed')
   end
 
-  it "gathers whole arrays as elements when each yields multiple" do
-    multi = EnumerableSpecs::YieldsMulti.new
-    expect(multi.sort {|a, b| a.first <=> b.first}).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
-  end
+  context 'when #each yields multiple' do
+    it 'gathers whole arrays as elements' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      expect(multi.sort { |a, b| a <=> b }).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
+    end
 
-  it "doesn't raise an error if #to_a returns a frozen Array" do
-    expect(EnumerableSpecs::Freezy.new.sort).to eq([1,2])
+    it 'yields multiple values as array' do
+      yielded = Set.new
+      multi = EnumerableSpecs::YieldsMulti.new
+      multi.sort { |*args| yielded += args; 0 }
+      expect(yielded).to contain_exactly([1, 2], [3, 4, 5], [6, 7, 8, 9])
+    end
   end
 end

@@ -2,23 +2,44 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Enumerable#filter_map' do
-  before :each do
-    @numerous = EnumerableSpecs::Numerous.new(*(1..8).to_a)
+  it 'returns an array containing truthy elements returned by the block' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.filter_map { |i| i * 2 if i.even? }).to eq([4, 8])
   end
 
-  it 'returns an empty array if there are no elements' do
-    expect(EnumerableSpecs::Empty.new.filter_map { true }).to eq([])
+  it 'returns an Enumerator if called without a block' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.filter_map).to be_an_instance_of(Enumerator)
+    expect(enum.filter_map.to_a).to eq([1, 2, 3, 4])
+    expect(enum.filter_map.each { |i| i * 2 if i.even? }).to eq([4, 8])
   end
 
-  it 'returns an array with truthy results of passing each element to block' do
-    expect(@numerous.filter_map { |i| i * 2 if i.even? }).to eq([4, 8, 12, 16])
-    expect(@numerous.filter_map { |i| i * 2 }).to eq([2, 4, 6, 8, 10, 12, 14, 16])
-    expect(@numerous.filter_map { 0 }).to eq([0, 0, 0, 0, 0, 0, 0, 0])
-    expect(@numerous.filter_map { false }).to eq([])
-    expect(@numerous.filter_map { nil }).to eq([])
+  it 'yields multiple arguments when #each yields multiple values' do
+    multi = EnumerableSpecs::YieldsMulti.new
+    yielded = []
+    multi.filter_map { |*args| yielded << args }
+    expect(yielded).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
   end
 
-  it 'returns an enumerator when no block given' do
-    expect(@numerous.filter_map).to be_an_instance_of(Enumerator)
+  describe 'Enumerable with size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns the enumerable size' do
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.filter_map.size).to eq(4)
+        end
+      end
+    end
+  end
+
+  describe 'Enumerable with no size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns nil' do
+          enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+          expect(enum.filter_map.size).to be_nil
+        end
+      end
+    end
   end
 end

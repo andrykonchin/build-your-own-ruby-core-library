@@ -1,64 +1,67 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#each_entry" do
-  before :each do
-    ScratchPad.record []
-    @enum = EnumerableSpecs::YieldsMixed.new
-    @entries = [1, [2], [3,4], [5,6,7], [8,9], nil, []]
+RSpec.describe 'Enumerable#each_entry' do
+  it 'calls the given block with each element' do
+    yielded = []
+
+    EnumerableSpecs::Numerous.new(1, 2, 3, 4).each_entry do |e|
+      yielded << e
+    end
+
+    expect(yielded).to eq([1, 2, 3, 4])
   end
 
-  it "yields multiple arguments as an array" do
-    acc = []
-    expect(@enum.each_entry {|g| acc << g}).to equal(@enum)
-    expect(acc).to eq(@entries)
+  it 'returns self' do
+    enum = EnumerableSpecs::Numerous.new
+    expect(enum.each_entry {}).to equal(enum)
   end
 
-  it "returns an enumerator if no block" do
-    e = @enum.each_entry
-    expect(e).to be_an_instance_of(Enumerator)
-    expect(e.to_a).to eq(@entries)
+  it 'returns an Enumerator if called without a block' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.each_entry).to be_an_instance_of(Enumerator)
+    expect(enum.each_entry.to_a).to eq([1, 2, 3, 4])
+
+    yielded = []
+    expect(enum.each_entry.each { |e| yielded << e }).to eq(enum)
+    expect(yielded).to eq([1, 2, 3, 4])
   end
 
-  it "passes through the values yielded by #each_with_index" do
-    [:a, :b].each_with_index.each_entry { |x, i| ScratchPad << [x, i] }
-    expect(ScratchPad.recorded).to eq([[:a, 0], [:b, 1]])
+  it 'raises an ArgumentError when extra arguments' do
+    expect { EnumerableSpecs::Numerous.new.each_entry('one').to_a }.to raise_error(ArgumentError)
+    expect { EnumerableSpecs::Numerous.new.each_entry('one') {}.to_a }.to raise_error(ArgumentError)
   end
 
-  it "raises an ArgumentError when extra arguments" do
-    expect { @enum.each_entry("one").to_a   }.to raise_error(ArgumentError)
-    expect { @enum.each_entry("one"){}.to_a }.to raise_error(ArgumentError)
+  it 'passes extra arguments to #each' do
+    enum = EnumerableSpecs::EachWithParameters.new(1, 2)
+    expect(enum.each_entry(:foo, 'bar').to_a).to eq([1, 2])
+    expect(enum.arguments_passed).to eq([:foo, 'bar'])
   end
 
-  it "passes extra arguments to #each" do
-    enum = EnumerableSpecs::EachCounter.new(1, 2)
-    expect(enum.each_entry(:foo, "bar").to_a).to eq([1,2])
-    expect(enum.arguments_passed).to eq([:foo, "bar"])
+  it 'yields multiple values as array when #each yields multiple values' do
+    multi = EnumerableSpecs::YieldsMulti.new
+    yielded = []
+    multi.each_entry { |*args| yielded << args }
+    expect(yielded).to eq([[[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]]])
   end
 
-  describe "Enumerable with size" do
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-        end
-
-        it "size returns the enumerable size" do
-          expect(@object.each_entry.size).to eq(@object.size)
+  describe 'Enumerable with size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns the enumerable size' do
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.each_entry.size).to eq(enum.size)
         end
       end
     end
   end
 
-  describe "Enumerable with no size" do
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-        end
-
-        it "size returns nil" do
-          expect(@object.each_entry.size).to eq(nil)
+  describe 'Enumerable with no size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns nil' do
+          enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+          expect(enum.each_entry.size).to be_nil
         end
       end
     end

@@ -1,66 +1,66 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#sort_by" do
-  it "returns an array of elements ordered by the result of block" do
-    a = EnumerableSpecs::Numerous.new("once", "upon", "a", "time")
-    expect(a.sort_by { |i| i[0] }).to eq(["a", "once", "time", "upon"])
+RSpec.describe 'Enumerable#sort_by' do
+  it 'returns an array of elements ordered by the result of block' do
+    enum = EnumerableSpecs::Numerous.new('once', 'upon', 'a', 'time')
+    expect(enum.sort_by { |i| i[0] }).to eq(%w[a once time upon])
   end
 
-  it "sorts the object by the given attribute" do
-    a = EnumerableSpecs::SortByDummy.new("fooo")
-    b = EnumerableSpecs::SortByDummy.new("bar")
-
-    ar = [a, b].sort_by { |d| d.s }
-    expect(ar).to eq([b, a])
+  it 'returns an Enumerator when a block is not supplied' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.sort_by).to be_an_instance_of(Enumerator)
+    expect(enum.sort_by.to_a).to eq([1, 2, 3, 4])
+    expect(enum.sort_by.each { |i| -i }).to eq([4, 3, 2, 1])
   end
 
-  it "returns an Enumerator when a block is not supplied" do
-    a = EnumerableSpecs::Numerous.new("a","b")
-    expect(a.sort_by).to be_an_instance_of(Enumerator)
-    expect(a.to_a).to eq(["a", "b"])
+  it 'raises a NoMethodError if elements do not respond to <=>' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+
+    expect {
+      enum.sort_by { BasicObject.new }
+    }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
   end
 
-  it "gathers whole arrays as elements when each yields multiple" do
-    multi = EnumerableSpecs::YieldsMulti.new
-    expect(multi.sort_by {|e| e.size}).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
+  it "raises an error if objects can't be compared, that is <=> returns nil" do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+
+    expect {
+      enum.sort_by { EnumerableSpecs::Uncomparable.new }
+    }.to raise_error(ArgumentError, 'comparison of EnumerableSpecs::Uncomparable with EnumerableSpecs::Uncomparable failed')
   end
 
-  it "returns an array of elements when a block is supplied and #map returns an enumerable" do
-    b = EnumerableSpecs::MapReturnsEnumerable.new
-    expect(b.sort_by{ |x| -x }).to eq([3, 2, 1])
+  describe 'when #each yields multiple values' do
+    it 'gathers whole arrays as elements' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      expect(multi.sort_by { |e| e }).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]]) # rubocop:disable Style/RedundantSortBy
+    end
+
+    it 'yields whole arrays as elements' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.sort_by { |*args| yielded << args; args }
+      expect(yielded).to contain_exactly([[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]])
+    end
   end
 
-  it "calls #each to iterate over the elements to be sorted" do
-    b = EnumerableSpecs::Numerous.new( 1, 2, 3 )
-    expect(b).to receive(:each).once.and_yield(1).and_yield(2).and_yield(3)
-    expect(b).not_to receive :map
-    expect(b.sort_by { |x| -x }).to eq([3, 2, 1])
-  end
-
-  describe "Enumerable with size" do
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-        end
-
-        it "size returns the enumerable size" do
-          expect(@object.sort_by.size).to eq(@object.size)
+  describe 'Enumerable with size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns the enumerable size' do
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.sort_by.size).to eq(enum.size)
         end
       end
     end
   end
 
-  describe "Enumerable with no size" do
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-        end
-
-        it "size returns nil" do
-          expect(@object.sort_by.size).to eq(nil)
+  describe 'Enumerable with no size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns nil' do
+          enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+          expect(enum.sort_by.size).to be_nil
         end
       end
     end
