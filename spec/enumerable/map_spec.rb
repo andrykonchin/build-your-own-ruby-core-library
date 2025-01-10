@@ -14,7 +14,7 @@ RSpec.describe "Enumerable#map" do
   end
 
   it "passes through the values yielded by #each_with_index" do
-    [:a, :b].each_with_index.map { |x, i| ScratchPad << [x, i]; nil }
+    EnumerableSpecs::Numerous.new(:a, :b).each_with_index.map { |x, i| ScratchPad << [x, i]; nil }
     expect(ScratchPad.recorded).to eq([[:a, 0], [:b, 1]])
   end
 

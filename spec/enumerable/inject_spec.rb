@@ -11,7 +11,7 @@ RSpec.describe "Enumerable#inject" do
 
   it "produces an array of the accumulator and the argument when given a block with a *arg" do
     a = []
-    [1,2].inject(0) {|*args| a << args; args[0] + args[1]}
+    EnumerableSpecs::Numerous.new(1,2).inject(0) {|*args| a << args; args[0] + args[1]}
     expect(a).to eq([[0, 1], [1, 2]])
   end
 

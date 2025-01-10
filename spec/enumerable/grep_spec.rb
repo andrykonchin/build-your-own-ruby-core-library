@@ -25,13 +25,13 @@ RSpec.describe "Enumerable#grep" do
   end
 
   it "can use $~ in the block when used with a Regexp" do
-    ary = ["aba", "aba"]
+    ary = EnumerableSpecs::Numerous.new("aba", "aba")
     expect(ary.grep(/a(b)a/) { $1 }).to eq(["b", "b"])
   end
 
   it "sets $~ in the block" do
     "z" =~ /z/ # Reset $~
-    ["abc", "def"].grep(/b/) { |e|
+    EnumerableSpecs::Numerous.new("abc", "def").grep(/b/) { |e|
       expect(e).to eq("abc")
       expect($&).to eq("b")
     }
@@ -42,23 +42,23 @@ RSpec.describe "Enumerable#grep" do
 
   it "does not set $~ when given no block" do
     "z" =~ /z/ # Reset $~
-    expect(["abc", "def"].grep(/b/)).to eq(["abc"])
+    expect(EnumerableSpecs::Numerous.new("abc", "def").grep(/b/)).to eq(["abc"])
     expect($&).to eq("z")
   end
 
   it "does not modify Regexp.last_match without block" do
     "z" =~ /z/ # Reset last match
-    expect(["abc", "def"].grep(/b/)).to eq(["abc"])
+    expect(EnumerableSpecs::Numerous.new("abc", "def").grep(/b/)).to eq(["abc"])
     expect(Regexp.last_match[0]).to eq("z")
   end
 
   it "correctly handles non-string elements" do
     'set last match' =~ /set last (.*)/
-    expect([:a, 'b', 'z', :c, 42, nil].grep(/[a-d]/)).to eq([:a, 'b', :c])
+    expect(EnumerableSpecs::Numerous.new(:a, 'b', 'z', :c, 42, nil).grep(/[a-d]/)).to eq([:a, 'b', :c])
     expect($1).to eq('match')
 
     o = double(to_str: 'hello')
-    expect([o].grep(/ll/).first).to equal(o)
+    expect(EnumerableSpecs::Numerous.new(o).grep(/ll/).first).to equal(o)
   end
 
   describe "with a block" do
