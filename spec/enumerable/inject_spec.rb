@@ -21,9 +21,7 @@ RSpec.describe "Enumerable#inject" do
   end
 
   it "converts non-Symbol method name argument to String with #to_str if two arguments" do
-    name = Object.new
-    def name.to_str; "-"; end
-
+    name = double(to_str: "-")
     expect(EnumerableSpecs::Numerous.new(1, 2, 3).inject(10, name)).to eq(4)
   end
 
@@ -53,9 +51,7 @@ RSpec.describe "Enumerable#inject" do
   end
 
   it "converts non-Symbol method name argument to String with #to_str" do
-    name = Object.new
-    def name.to_str; "-"; end
-
+    name = double(to_str: "-")
     expect(EnumerableSpecs::Numerous.new(10, 1, 2, 3).inject(name)).to eq(4)
   end
 

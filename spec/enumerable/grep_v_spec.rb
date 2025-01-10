@@ -37,10 +37,7 @@ RSpec.describe "Enumerable#grep_v" do
     expect([:a, 'b', 'z', :c, 42, nil].grep_v(/[a-d]/)).to eq(['z', 42, nil])
     expect($1).to eq('match')
 
-    o = Object.new
-    def o.to_str
-      'hello'
-    end
+    o = double(to_str: 'hello')
     expect([o].grep_v(/mm/).first).to equal(o)
   end
 
