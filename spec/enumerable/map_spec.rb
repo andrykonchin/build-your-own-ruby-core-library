@@ -23,7 +23,7 @@ RSpec.describe "Enumerable#map" do
     expect(multi.map {|e| e}).to eq([1,3,6])
   end
 
-  it "only yields increasing values for a Range" do
+  it "only yields increasing values for a Range" do # TODO: replace Array with object
     expect((1..0).map { |x| x }).to eq([])
     expect((1..1).map { |x| x }).to eq([1])
     expect((1..2).map { |x| x }).to eq([1, 2])
@@ -78,7 +78,7 @@ RSpec.describe "Enumerable#map" do
     expect(ScratchPad.recorded).to eq([[1, 'a'], [2, 'b']])
   end
 
-  it "calls the each method on sub-classes" do
+  it "calls the each method on sub-classes" do # TODO: replace Array with object
     c = Class.new(Hash) do
       def each
         ScratchPad << 'in each'

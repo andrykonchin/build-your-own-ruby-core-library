@@ -49,7 +49,7 @@ RSpec.describe 'Enumerable#uniq' do
     expect(enum.uniq.size).to eq(1)
   end
 
-  context 'when yielded with multiple arguments' do
+  context 'when yielded with multiple arguments' do # TODO: don't use Enumerator
     before :each do
       @enum = Object.new.to_enum
       class << @enum

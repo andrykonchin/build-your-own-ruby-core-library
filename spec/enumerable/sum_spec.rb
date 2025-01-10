@@ -19,7 +19,7 @@ RSpec.describe 'Enumerable#sum' do
       expect(@enum.sum { |element| element * 2 }).to eq(10/3r)
     end
 
-    it 'does not destructure array elements' do
+    it 'does not destructure array elements' do # TODO: don't use Enumerator
       class << @enum
         def each
           yield [1,2]

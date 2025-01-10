@@ -101,7 +101,7 @@ RSpec.describe "Enumerable#inject" do
     expect(EnumerableSpecs::EachDefiner.new().inject {|acc,x| 999 }).to eq(nil)
   end
 
-  it "tolerates increasing a collection size during iterating Array" do
+  it "tolerates increasing a collection size during iterating Array" do # TODO: replace Array with object
     array = [:a, :b, :c]
     ScratchPad.record []
     i = 0

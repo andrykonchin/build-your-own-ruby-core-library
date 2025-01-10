@@ -10,6 +10,7 @@ RSpec.describe "Enumerable#minmax" do
     @strs = EnumerableSpecs::Numerous.new("333", "2", "60", "55555", "1010", "111")
   end
 
+  # TODO: add a case for returning a maximum element
   it "returns the minimum element" do
     expect(@enum.minmax).to eq([4, 10])
     expect(@strs.minmax).to eq(["1010", "60"])

@@ -43,7 +43,7 @@ RSpec.describe "Enumerable#slice_when" do
     end
   end
 
-  describe "when an iterator method yields more than one value" do
+  describe "when an iterator method yields more than one value" do # TODO: replace self.to_enum
     it "processes all yielded values" do
       def foo
         yield 1, 2
