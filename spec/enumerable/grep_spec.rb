@@ -57,10 +57,7 @@ RSpec.describe "Enumerable#grep" do
     expect([:a, 'b', 'z', :c, 42, nil].grep(/[a-d]/)).to eq([:a, 'b', :c])
     expect($1).to eq('match')
 
-    o = Object.new
-    def o.to_str
-      'hello'
-    end
+    o = double(to_str: 'hello')
     expect([o].grep(/ll/).first).to equal(o)
   end
 
