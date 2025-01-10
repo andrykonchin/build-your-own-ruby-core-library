@@ -11,7 +11,7 @@ RSpec.describe "Enumerable#grep_v" do
 
   it "sets $~ in the block" do
     "z" =~ /z/ # Reset $~
-    ["abc", "def"].grep_v(/e/) { |e|
+    EnumerableSpecs::Numerous.new("abc", "def").grep_v(/e/) { |e|
       expect(e).to eq("abc")
       expect($~).to eq(nil)
     }
@@ -22,23 +22,23 @@ RSpec.describe "Enumerable#grep_v" do
 
   it "does not set $~ when given no block" do
     "z" =~ /z/ # Reset $~
-    expect(["abc", "def"].grep_v(/e/)).to eq(["abc"])
+    expect(EnumerableSpecs::Numerous.new("abc", "def").grep_v(/e/)).to eq(["abc"])
     expect($&).to eq("z")
   end
 
   it "does not modify Regexp.last_match without block" do
     "z" =~ /z/ # Reset last match
-    expect(["abc", "def"].grep_v(/e/)).to eq(["abc"])
+    expect(EnumerableSpecs::Numerous.new("abc", "def").grep_v(/e/)).to eq(["abc"])
     expect(Regexp.last_match[0]).to eq("z")
   end
 
   it "correctly handles non-string elements" do
     'set last match' =~ /set last (.*)/
-    expect([:a, 'b', 'z', :c, 42, nil].grep_v(/[a-d]/)).to eq(['z', 42, nil])
+    expect(EnumerableSpecs::Numerous.new(:a, 'b', 'z', :c, 42, nil).grep_v(/[a-d]/)).to eq(['z', 42, nil])
     expect($1).to eq('match')
 
     o = double(to_str: 'hello')
-    expect([o].grep_v(/mm/).first).to equal(o)
+    expect(EnumerableSpecs::Numerous.new(o).grep_v(/mm/).first).to equal(o)
   end
 
   describe "without block" do

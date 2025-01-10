@@ -29,13 +29,16 @@ RSpec.describe "Enumerable#one?" do
   end
 
   describe "with no block" do
-      expect([false, nil, true].one?).to be true
+    it "returns true if only one element evaluates to true" do
+      expect(EnumerableSpecs::Numerous.new(false, nil, true).one?).to be true
     end
 
-      expect([false, :value, nil, true].one?).to be false
+    it "returns false if two elements evaluate to true" do
+      expect(EnumerableSpecs::Numerous.new(false, :value, nil, true).one?).to be false
     end
 
-      expect([false, nil, false].one?).to be false
+    it "returns false if all elements evaluate to false" do
+      expect(EnumerableSpecs::Numerous.new(false, nil, false).one?).to be false
     end
 
     it "gathers whole arrays as elements when each yields multiple" do
@@ -45,13 +48,16 @@ RSpec.describe "Enumerable#one?" do
   end
 
   describe "with a block" do
-      expect([:a, :b, :c].one? { |s| s == :a }).to be true
+    it "returns true if block returns true once" do
+      expect(EnumerableSpecs::Numerous.new(:a, :b, :c).one? { |s| s == :a }).to be true
     end
 
-      expect([:a, :b, :c].one? { |s| s == :a || s == :b }).to be false
+    it "returns false if the block returns true more than once" do
+      expect(EnumerableSpecs::Numerous.new(:a, :b, :c).one? { |s| s == :a || s == :b }).to be false
     end
 
-      expect([:a, :b, :c].one? { |s| s == :d }).to be false
+    it "returns false if the block only returns false" do
+      expect(EnumerableSpecs::Numerous.new(:a, :b, :c).one? { |s| s == :d }).to be false
     end
 
     it "does not hide exceptions out of the block" do
