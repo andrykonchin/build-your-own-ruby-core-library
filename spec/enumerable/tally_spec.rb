@@ -45,8 +45,7 @@ RSpec.describe "Enumerable#tally" do
 
     it "calls #to_hash to convert argument to Hash implicitly if passed not a Hash" do
       enum = EnumerableSpecs::Numerous.new('foo', 'bar', 'foo', 'baz')
-      object = Object.new
-      def object.to_hash; { 'foo' => 1 }; end
+      object = double(to_hash: { 'foo' => 1 })
       expect(enum.tally(object)).to eq({ 'foo' => 3, 'bar' => 1, 'baz' => 1})
     end
 
