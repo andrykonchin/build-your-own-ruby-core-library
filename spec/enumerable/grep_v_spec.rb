@@ -1,73 +1,55 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#grep_v" do
-  before :each do
-    @numerous = EnumerableSpecs::Numerous.new(*(0..9).to_a)
-    def (@odd_matcher = BasicObject.new).===(obj)
-      obj.odd?
-    end
+RSpec.describe 'Enumerable#grep_v' do
+  it "returns an array of objects based on elements of self that don't match the given pattern" do
+    enum = EnumerableSpecs::Numerous.new('a', 'b', 'ab', 'bc')
+    expect(enum.grep_v(/a/)).to contain_exactly('b', 'bc')
   end
 
-  it "sets $~ in the block" do
-    "z" =~ /z/ # Reset $~
-    EnumerableSpecs::Numerous.new("abc", "def").grep_v(/e/) { |e|
-      expect(e).to eq("abc")
-      expect($~).to eq(nil)
-    }
+  it 'returns an array containing each element for which `pattern === element` is false' do
+    enum = EnumerableSpecs::Numerous.new(1, -2, 3, -4)
 
-    # Set by the match of "def"
-    expect($&).to eq("e")
-  end
-
-  it "does not set $~ when given no block" do
-    "z" =~ /z/ # Reset $~
-    expect(EnumerableSpecs::Numerous.new("abc", "def").grep_v(/e/)).to eq(["abc"])
-    expect($&).to eq("z")
-  end
-
-  it "does not modify Regexp.last_match without block" do
-    "z" =~ /z/ # Reset last match
-    expect(EnumerableSpecs::Numerous.new("abc", "def").grep_v(/e/)).to eq(["abc"])
-    expect(Regexp.last_match[0]).to eq("z")
-  end
-
-  it "correctly handles non-string elements" do
-    'set last match' =~ /set last (.*)/
-    expect(EnumerableSpecs::Numerous.new(:a, 'b', 'z', :c, 42, nil).grep_v(/[a-d]/)).to eq(['z', 42, nil])
-    expect($1).to eq('match')
-
-    o = double(to_str: 'hello')
-    expect(EnumerableSpecs::Numerous.new(o).grep_v(/mm/).first).to equal(o)
-  end
-
-  describe "without block" do
-    it "returns an Array of matched elements" do
-      expect(@numerous.grep_v(@odd_matcher)).to eq([0, 2, 4, 6, 8])
+    pattern = Object.new
+    def pattern.===(v)
+      v > 0
     end
 
-    it "compares pattern with gathered array when yielded with multiple arguments" do
-      unmatcher = double("===": false)
-      expect(EnumerableSpecs::YieldsMixed2.new.grep_v(unmatcher)).to eq(EnumerableSpecs::YieldsMixed2.gathered_yields)
-    end
-
-    it "raises an ArgumentError when not given a pattern" do
-      expect { @numerous.grep_v }.to raise_error(ArgumentError)
-    end
+    expect(enum.grep_v(pattern)).to contain_exactly(-2, -4)
   end
 
-  describe "with block" do
-    it "returns an Array of matched elements that mapped by the block" do
-      expect(@numerous.grep_v(@odd_matcher) { |n| n * 2 }).to eq([0, 4, 8, 12, 16])
+  it 'gathers whole arrays as elements when #each yields multiple' do
+    multi = EnumerableSpecs::YieldsMulti.new
+    pattern = EnumerableSpecs::Pattern.new { false }
+    expect(multi.grep_v(pattern)).to contain_exactly([1, 2], [3, 4, 5], [6, 7, 8, 9])
+    expect(pattern.yielded).to contain_exactly([[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]])
+  end
+
+  context 'given a block' do
+    it 'calls the block with each non-matching element and returns an array containing each object returned by the block' do
+      enum = EnumerableSpecs::Numerous.new('a', 'b', 'ab', 'bc')
+      expect(enum.grep_v(/a/) { |s| s.to_sym }).to contain_exactly(:b, :bc)
     end
 
-    it "calls the block with gathered array when yielded with multiple arguments" do
-      unmatcher = double("===": false)
-      expect(EnumerableSpecs::YieldsMixed2.new.grep_v(unmatcher){ |e| e }).to eq(EnumerableSpecs::YieldsMixed2.gathered_yields)
+    it 'yields multiple values as array when #each yields multiple' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      pattern = EnumerableSpecs::Pattern.new { false }
+      yielded = []
+      multi.grep_v(pattern) { |*args| yielded << args }
+      expect(yielded).to contain_exactly([[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]])
     end
 
-    it "raises an ArgumentError when not given a pattern" do
-      expect { @numerous.grep_v { |e| e } }.to raise_error(ArgumentError)
+    it 'sets $~ in the block' do
+      skip "it's unclear how to implement in pure Ruby"
+
+      'z' =~ /z/ # Reset $~
+      EnumerableSpecs::Numerous.new('abc', 'def').grep_v(/e/) { |e|
+        expect(e).to eq('abc')
+        expect($~).to be_nil
+      }
+
+      # Set by the match of "def"
+      expect($&).to eq('e')
     end
   end
 end

@@ -1,67 +1,81 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#minmax_by" do
-  it "returns an enumerator if no block" do
-    expect(EnumerableSpecs::Numerous.new(42).minmax_by).to be_an_instance_of(Enumerator)
+RSpec.describe 'Enumerable#minmax_by' do
+  it 'returns a 2-element array containing the elements for which the block returns minimum and maximum values' do
+    enum = EnumerableSpecs::Numerous.new(*%w[3 111 22])
+    expect(enum.minmax_by { |e| e.size }).to eq(%w[3 111])
   end
 
-  it "returns nil if #each yields no objects" do
-    expect(EnumerableSpecs::Empty.new.minmax_by {|o| o.nonesuch }).to eq([nil, nil])
+  it 'returns an Enumerator if called without a block' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.minmax_by).to be_an_instance_of(Enumerator)
+    expect(enum.minmax_by.to_a).to eq([1, 2, 3, 4])
+    expect(enum.minmax_by.each { |e| e }).to eq([1, 4]) # rubocop:disable Lint/Void
   end
 
-  it "returns the object for whom the value returned by block is the largest" do
-    expect(EnumerableSpecs::Numerous.new(*%w[1 2 3]).minmax_by {|obj| obj.to_i }).to eq(['1', '3'])
-    expect(EnumerableSpecs::Numerous.new(*%w[three five]).minmax_by {|obj| obj.length }).to eq(['five', 'three'])
+  it 'compares elements with #<=> method' do
+    a, b, c = (1..3).map { |n| EnumerableSpecs::ReverseComparable.new(n) }
+    enum = EnumerableSpecs::Numerous.new(a, b, c)
+    expect(enum.minmax_by { |obj| obj }).to eq([c, a])
   end
 
-  it "returns the object that appears first in #each in case of a tie" do
-    a, b, c, d = '1', '1', '2', '2'
-    mm = EnumerableSpecs::Numerous.new(a, b, c, d).minmax_by {|obj| obj.to_i }
-    expect(mm[0]).to equal(a)
-    expect(mm[1]).to equal(c)
+  it 'returns [nil, nil] for an empty Enumerable' do
+    expect(EnumerableSpecs::Empty.new.minmax_by { |o| o }).to eq([nil, nil])
   end
 
-  it "uses min/max.<=>(current) to determine order" do
-    a, b, c = (1..3).map{|n| EnumerableSpecs::ReverseComparable.new(n)}
-
-    # Just using self here to avoid additional complexity
-    expect(EnumerableSpecs::Numerous.new(a, b, c).minmax_by {|obj| obj }).to eq([c, a])
+  it 'returns [element, element] for an Enumerable with only one element' do
+    enum = EnumerableSpecs::Numerous.new(1)
+    expect(enum.minmax_by { |o| o }).to eq([1, 1])
   end
 
-  it "is able to return the maximum for enums that contain nils" do
-    enum = EnumerableSpecs::Numerous.new(nil, nil, true)
-    expect(enum.minmax_by {|o| o.nil? ? 0 : 1 }).to eq([nil, true])
+  it 'raises a NoMethodError for elements not responding to #<=>' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+
+    expect {
+      enum.minmax_by { BasicObject.new }
+    }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
   end
 
-  it "gathers whole arrays as elements when each yields multiple" do
-    multi = EnumerableSpecs::YieldsMulti.new
-    expect(multi.minmax_by {|e| e.size}).to eq([[1, 2], [6, 7, 8, 9]])
+  it 'raises an ArgumentError when elements are incompatible' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+
+    expect {
+      enum.minmax_by { EnumerableSpecs::Uncomparable.new }
+    }.to raise_error(ArgumentError, 'comparison of EnumerableSpecs::Uncomparable with EnumerableSpecs::Uncomparable failed')
   end
 
-  describe "Enumerable with size" do
-    before do
-      @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+  context 'when #each yields multiple' do
+    it 'gathers whole arrays as elements' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      expect(multi.minmax_by { |e| e.size }).to eq([[1, 2], [6, 7, 8, 9]])
     end
 
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        it "size returns the enumerable size" do
-          expect(@object.minmax_by.size).to eq(@object.size)
+    it 'yields whole arrays as elements' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.minmax_by { |*args| yielded << args; args }
+      expect(yielded).to contain_exactly([[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]])
+    end
+  end
+
+  describe 'Enumerable with size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns the enumerable size' do
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.minmax_by.size).to eq(enum.size)
         end
       end
     end
   end
 
-  describe "Enumerable with no size" do
-    before do
-      @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-    end
-
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        it "size returns nil" do
-          expect(@object.minmax_by.size).to eq(nil)
+  describe 'Enumerable with no size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns nil' do
+          enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+          expect(enum.minmax_by.size).to be_nil
         end
       end
     end

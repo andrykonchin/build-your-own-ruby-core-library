@@ -1,119 +1,113 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#max" do
-  before :each do
-    @e_strs = EnumerableSpecs::EachDefiner.new("333", "22", "666666", "1", "55555", "1010101010")
-    @e_ints = EnumerableSpecs::EachDefiner.new( 333,   22,   666666,   55555, 1010101010)
+RSpec.describe 'Enumerable#max' do
+  it 'returns the maximum element' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.max).to eq(4)
   end
 
-  it "returns the maximum element" do
-    expect(EnumerableSpecs::Numerous.new.max).to eq(6)
+  it 'compares elements with #<=> method' do
+    a, b, c = (1..3).map { |n| EnumerableSpecs::ReverseComparable.new(n) }
+    enum = EnumerableSpecs::Numerous.new(a, b, c)
+    expect(enum.max).to eq(a)
   end
 
-  it "returns the maximum element (basics cases)" do
-    expect(EnumerableSpecs::EachDefiner.new(55).max).to eq(55)
-
-    expect(EnumerableSpecs::EachDefiner.new(11,99).max).to eq(99)
-    expect(EnumerableSpecs::EachDefiner.new(99,11).max).to eq(99)
-    expect(EnumerableSpecs::EachDefiner.new(2, 33, 4, 11).max).to eq(33)
-
-    expect(EnumerableSpecs::EachDefiner.new(1,2,3,4,5).max).to eq(5)
-    expect(EnumerableSpecs::EachDefiner.new(5,4,3,2,1).max).to eq(5)
-    expect(EnumerableSpecs::EachDefiner.new(1,4,3,5,2).max).to eq(5)
-    expect(EnumerableSpecs::EachDefiner.new(5,5,5,5,5).max).to eq(5)
-
-    expect(EnumerableSpecs::EachDefiner.new("aa","tt").max).to eq("tt")
-    expect(EnumerableSpecs::EachDefiner.new("tt","aa").max).to eq("tt")
-    expect(EnumerableSpecs::EachDefiner.new("2","33","4","11").max).to eq("4")
-
-    expect(@e_strs.max).to eq("666666")
-    expect(@e_ints.max).to eq(1010101010)
+  it 'returns nil for an empty Enumerable' do
+    expect(EnumerableSpecs::Empty.new.max).to be_nil
   end
 
-  it "returns nil for an empty Enumerable" do
-    expect(EnumerableSpecs::EachDefiner.new.max).to eq(nil)
+  it 'raises a NoMethodError for elements not responding to #<=>' do
+    enum = EnumerableSpecs::Numerous.new(BasicObject.new, BasicObject.new)
+
+    expect {
+      enum.max
+    }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
   end
 
-  it "raises a NoMethodError for elements without #<=>" do
-    expect do
-      EnumerableSpecs::EachDefiner.new(BasicObject.new, BasicObject.new).max
-    end.to raise_error(NoMethodError)
+  it 'raises an ArgumentError for incomparable elements' do
+    enum = EnumerableSpecs::Numerous.new(11, '22')
+
+    expect {
+      enum.max
+    }.to raise_error(ArgumentError, 'comparison of String with 11 failed')
   end
 
-  it "raises an ArgumentError for incomparable elements" do
-    expect do
-      EnumerableSpecs::EachDefiner.new(11,"22").max
-    end.to raise_error(ArgumentError)
-    expect do
-      EnumerableSpecs::EachDefiner.new(11,12,22,33).max{|a, b| nil}
-    end.to raise_error(ArgumentError)
-  end
-
-  context "when passed a block" do
-    it "returns the maximum element" do
-      expect(EnumerableSpecs::EachDefiner.new("2","33","4","11").max {|a,b| a <=> b }).to eq("4")
-      expect(EnumerableSpecs::EachDefiner.new( 2 , 33 , 4 , 11 ).max {|a,b| a <=> b }).to eq(33)
-
-      expect(EnumerableSpecs::EachDefiner.new("2","33","4","11").max {|a,b| b <=> a }).to eq("11")
-      expect(EnumerableSpecs::EachDefiner.new( 2 , 33 , 4 , 11 ).max {|a,b| b <=> a }).to eq(2)
-
-      expect(@e_strs.max {|a,b| a.length <=> b.length }).to eq("1010101010")
-
-      expect(@e_strs.max {|a,b| a <=> b }).to eq("666666")
-      expect(@e_strs.max {|a,b| a.to_i <=> b.to_i }).to eq("1010101010")
-
-      expect(@e_ints.max {|a,b| a <=> b }).to eq(1010101010)
-      expect(@e_ints.max {|a,b| a.to_s <=> b.to_s }).to eq(666666)
+  context 'given an argument' do
+    it 'returns an array containing n greatest elements' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+      expect(enum.max(2)).to contain_exactly(3, 4)
     end
-  end
 
-  it "returns the maximum for enumerables that contain nils" do
-    arr = EnumerableSpecs::Numerous.new(nil, nil, true)
-    expect(arr.max { |a, b|
-      x = a.nil? ? 1 : a ? 0 : -1
-      y = b.nil? ? 1 : b ? 0 : -1
-      x <=> y
-    }).to eq(nil)
-  end
+    it 'ignores nil value' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+      expect(enum.max(nil)).to eq(4)
+    end
 
-  it "gathers whole arrays as elements when each yields multiple" do
-    multi = EnumerableSpecs::YieldsMulti.new
-    expect(multi.max).to eq([6, 7, 8, 9])
-  end
+    it 'allows an argument n be greater than elements number' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+      expect(enum.max(10)).to contain_exactly(1, 2, 3, 4)
+    end
 
-  context "when called with an argument n" do
-    context "without a block" do
-      it "returns an array containing the maximum n elements" do
-        result = @e_ints.max(2)
-        expect(result).to eq([1010101010, 666666])
+    it 'raises an ArgumentError when n is negative' do
+      enum = EnumerableSpecs::Numerous.new
+      expect { enum.max(-1) }.to raise_error(ArgumentError, 'negative size (-1)')
+    end
+
+    it 'raises a RangeError when passed a Bignum' do
+      enum = EnumerableSpecs::Numerous.new
+
+      expect {
+        enum.max(bignum_value)
+      }.to raise_error(RangeError, "bignum too big to convert into 'long'")
+    end
+
+    describe 'argument conversion to Integer' do
+      it 'converts the passed argument to an Integer using #to_int' do
+        enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+        n = double('n', to_int: 2)
+        expect(enum.max(n)).to contain_exactly(3, 4)
       end
-    end
 
-    context "with a block" do
-      it "returns an array containing the maximum n elements" do
-        result = @e_ints.max(2) { |a, b| a * 2 <=> b * 2 }
-        expect(result).to eq([1010101010, 666666])
+      it 'raises a TypeError if the passed argument does not respond to #to_int' do
+        enum = EnumerableSpecs::Numerous.new
+        expect { enum.max('a') }.to raise_error(TypeError, 'no implicit conversion of String into Integer')
       end
-    end
 
-    context "on a enumerable of length x where x < n" do
-      it "returns an array containing the maximum n elements of length x" do
-        result = @e_ints.max(500)
-        expect(result.length).to eq(5)
-      end
-    end
+      it 'raises a TypeError if the passed argument responds to #to_int but it returns non-Integer value' do
+        enum = EnumerableSpecs::Numerous.new
+        n = double('n', to_int: 'a')
 
-    context "that is negative" do
-      it "raises an ArgumentError" do
-        expect { @e_ints.max(-1) }.to raise_error(ArgumentError)
+        expect {
+          enum.max(n)
+        }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")
       end
     end
   end
 
-  context "that is nil" do
-    it "returns the maximum element" do
-      expect(@e_ints.max(nil)).to eq(1010101010)
+  context 'given a block' do
+    it 'compares elements using a block' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+      expect(enum.max { |a, b| b <=> a }).to eq(1)
+    end
+
+    it 'returns an array containing the maximum n elements when called with an argument n' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+      expect(enum.max(2) { |a, b| b <=> a }).to contain_exactly(2, 1)
+    end
+
+    context 'when #each yields multiple' do
+      it 'gathers whole arrays as elements' do
+        multi = EnumerableSpecs::YieldsMulti.new
+        expect(multi.max { |a, b| a <=> b }).to eq([6, 7, 8, 9])
+      end
+
+      it 'yields whole arrays as elements' do
+        multi = EnumerableSpecs::YieldsMulti.new
+        yielded = Set.new
+        multi.max { |*args| yielded += args; 0 }
+        expect(yielded).to contain_exactly([1, 2], [3, 4, 5], [6, 7, 8, 9])
+      end
     end
   end
 end

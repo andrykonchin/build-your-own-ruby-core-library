@@ -1,60 +1,61 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#group_by" do
-  it "returns a hash with values grouped according to the block" do
-    e = EnumerableSpecs::Numerous.new("foo", "bar", "baz")
-    h = e.group_by { |word| word[0..0].to_sym }
-    expect(h).to eq({ f: ["foo"], b: ["bar", "baz"]})
+RSpec.describe 'Enumerable#group_by' do
+  it 'returns a Hash such as each key is a returned value from the block and each value is an array of those elements for which the block returned that key' do
+    enum = EnumerableSpecs::Numerous.new('a', 'b', 'abc')
+    expect(enum.group_by { |s| s.size }).to eq({ 1 => %w[a b], 3 => ['abc'] })
   end
 
-  it "returns an empty hash for empty enumerables" do
-    expect(EnumerableSpecs::Empty.new.group_by { |x| x}).to eq({})
+  it 'returns an Enumerator if called without a block' do
+    enum = EnumerableSpecs::Numerous.new('a', 'b', 'abc')
+    expect(enum.group_by).to be_an_instance_of(Enumerator)
+    expect(enum.group_by.to_a).to contain_exactly('a', 'b', 'abc')
+    expect(enum.group_by.each { |s| s.size }).to eq({ 1 => %w[a b], 3 => ['abc'] })
   end
 
-  it "returns a hash without default_proc" do
-    e = EnumerableSpecs::Numerous.new("foo", "bar", "baz")
-    h = e.group_by { |word| word[0..0].to_sym }
-    expect(h[:some]).to be_nil
-    expect(h.default_proc).to be_nil
-    expect(h.default).to be_nil
+  it 'returns an empty Hash for empty Enumerables' do
+    enum = EnumerableSpecs::Empty.new
+    expect(enum.group_by { |x| x }).to eq({})
   end
 
-  it "returns an Enumerator if called without a block" do
-    expect(EnumerableSpecs::Numerous.new.group_by).to be_an_instance_of(Enumerator)
+  context 'when #each yields multiple' do
+    it 'gathers whole arrays as elements when #each yields multiple' do
+      enum = EnumerableSpecs::YieldsMulti.new
+      expect(enum.group_by { |i| i }).to eq(
+        {
+          [1, 2] => [[1, 2]],
+          [6, 7, 8, 9] => [[6, 7, 8, 9]],
+          [3, 4, 5] => [[3, 4, 5]]
+        }
+      )
+    end
+
+    it 'yields multiple values as array' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.group_by { |*args| yielded << args; args }
+      expect(yielded).to contain_exactly([[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]])
+    end
   end
 
-  it "gathers whole arrays as elements when each yields multiple" do
-    e = EnumerableSpecs::YieldsMulti.new
-    h = e.group_by { |i| i }
-    expect(h).to eq({ [1, 2] => [[1, 2]],
-                  [6, 7, 8, 9] => [[6, 7, 8, 9]],
-                  [3, 4, 5] => [[3, 4, 5]] })
-  end
-
-  describe "Enumerable with size" do
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-        end
-
-        it "size returns the enumerable size" do
-          expect(@object.group_by.size).to eq(@object.size)
+  describe 'Enumerable with size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns the enumerable size' do
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.group_by.size).to eq(enum.size)
         end
       end
     end
   end
 
-  describe "Enumerable with no size" do
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-        end
-
-        it "size returns nil" do
-          expect(@object.group_by.size).to eq(nil)
+  describe 'Enumerable with no size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns nil' do
+          enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+          expect(enum.group_by.size).to be_nil
         end
       end
     end

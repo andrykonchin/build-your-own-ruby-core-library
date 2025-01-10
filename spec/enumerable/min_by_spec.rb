@@ -1,105 +1,138 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#min_by" do
-  it "returns an enumerator if no block" do
-    expect(EnumerableSpecs::Numerous.new(42).min_by).to be_an_instance_of(Enumerator)
+RSpec.describe 'Enumerable#min_by' do
+  it 'returns element for which the block returns the minimum value' do
+    enum = EnumerableSpecs::Numerous.new(*%w[4 3 2 1])
+    expect(enum.min_by { |e| e.to_i }).to eq('1')
   end
 
-  it "returns nil if #each yields no objects" do
-    expect(EnumerableSpecs::Empty.new.min_by {|o| o.nonesuch }).to eq(nil)
+  it 'compares returned by a block values with #<=> method' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3)
+    expect(enum.min_by { |e| EnumerableSpecs::ReverseComparable.new(e) }).to eq(3)
   end
 
-  it "returns the object for whom the value returned by block is the smallest" do
-    expect(EnumerableSpecs::Numerous.new(*%w[3 2 1]).min_by {|obj| obj.to_i }).to eq('1')
-    expect(EnumerableSpecs::Numerous.new(*%w[five three]).min_by {|obj| obj.length }).to eq('five')
+  it 'returns an Enumerator if called without a block' do
+    enum = EnumerableSpecs::Numerous.new(4, 3, 2, 1)
+    expect(enum.min_by).to be_an_instance_of(Enumerator)
+    expect(enum.min_by.to_a).to contain_exactly(4, 3, 2, 1)
+    expect(enum.min_by.each { |e| e }).to eq(1) # rubocop:disable Lint/Void
   end
 
-  it "returns the object that appears first in #each in case of a tie" do
-    a, b, c = '2', '1', '1'
-    expect(EnumerableSpecs::Numerous.new(a, b, c).min_by {|obj| obj.to_i }).to equal(b)
+  it 'returns nil for an empty Enumerable' do
+    expect(EnumerableSpecs::Empty.new.min_by { 1 }).to be_nil
   end
 
-  it "uses min.<=>(current) to determine order" do
-    a, b, c = (1..3).map{|n| EnumerableSpecs::ReverseComparable.new(n)}
+  it 'raises a NoMethodError for returned by a block values not responding to #<=>' do
+    enum = EnumerableSpecs::Numerous.new
 
-    # Just using self here to avoid additional complexity
-    expect(EnumerableSpecs::Numerous.new(a, b, c).min_by {|obj| obj }).to eq(c)
+    expect {
+      enum.min_by { BasicObject.new }
+    }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
   end
 
-  it "is able to return the minimum for enums that contain nils" do
-    enum = EnumerableSpecs::Numerous.new(nil, nil, true)
-    expect(enum.min_by {|o| o.nil? ? 0 : 1 }).to eq(nil)
-    expect(enum.min_by {|o| o.nil? ? 1 : 0 }).to eq(true)
+  it 'raises an ArgumentError for incomparable for returned by a block values' do
+    enum = EnumerableSpecs::Numerous.new
+
+    expect {
+      enum.min_by { EnumerableSpecs::Uncomparable.new }
+    }.to raise_error(ArgumentError, 'comparison of EnumerableSpecs::Uncomparable with EnumerableSpecs::Uncomparable failed')
   end
 
-  it "gathers whole arrays as elements when each yields multiple" do
-    multi = EnumerableSpecs::YieldsMulti.new
-    expect(multi.min_by {|e| e.size}).to eq([1, 2])
-  end
-
-  describe "Enumerable with size" do
-    before do
-      @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+  context 'when #each yields multiple' do
+    it 'gathers whole arrays as elements' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      expect(multi.min_by { |e| e }).to eq([1, 2])
     end
 
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        it "size returns the enumerable size" do
-          expect(@object.min_by.size).to eq(@object.size)
+    it 'yields whole arrays as elements' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.min_by { |*args| yielded << args; args }
+      expect(yielded).to contain_exactly([[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]])
+    end
+  end
+
+  context 'given an argument n' do
+    it 'returns an array containing n elements for which a block returned the minimum values' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+      expect(enum.min_by(2) { |e| e }).to contain_exactly(1, 2)
+    end
+
+    it 'returns an Enumerator if called without a block' do
+      enum = EnumerableSpecs::Numerous.new(4, 3, 2, 1)
+      expect(enum.min_by(2)).to be_an_instance_of(Enumerator)
+      expect(enum.min_by(2).to_a).to contain_exactly(4, 3, 2, 1)
+      expect(enum.min_by(2).each { |e| e }).to contain_exactly(1, 2) # rubocop:disable Lint/Void
+    end
+
+    it 'ignores nil value' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+      expect(enum.min_by(nil) { |e| e }).to eq(1)
+    end
+
+    it 'allows an argument n be greater than elements number' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+      expect(enum.min_by(10) { |e| e }).to contain_exactly(1, 2, 3, 4)
+    end
+
+    it 'raises an ArgumentError when n is negative' do
+      enum = EnumerableSpecs::Numerous.new
+      expect { enum.min_by(-1) { |e| e } }.to raise_error(ArgumentError, 'negative size (-1)')
+    end
+
+    it 'raises a RangeError when passed a Bignum' do
+      enum = EnumerableSpecs::Numerous.new
+
+      expect {
+        enum.min_by(bignum_value) { |n| n }
+      }.to raise_error(RangeError, "bignum too big to convert into 'long'")
+    end
+
+    describe 'argument conversion to Integer' do
+      it 'converts the passed argument to an Integer using #to_int' do
+        enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+        n = double('n', to_int: 2)
+        expect(enum.min_by(n) { |e| e }).to contain_exactly(1, 2)
+      end
+
+      it 'raises a TypeError if the passed argument does not respond to #to_int' do
+        enum = EnumerableSpecs::Numerous.new
+
+        expect {
+          enum.min_by('a') { |e| e }
+        }.to raise_error(TypeError, 'no implicit conversion of String into Integer')
+      end
+
+      it 'raises a TypeError if the passed argument responds to #to_int but it returns non-Integer value' do
+        enum = EnumerableSpecs::Numerous.new
+        n = double('n', to_int: 'a')
+
+        expect {
+          enum.min_by(n) { |e| e }
+        }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")
+      end
+    end
+  end
+
+  describe 'Enumerable with size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns the enumerable size' do
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.min_by.size).to eq(enum.size)
         end
       end
     end
   end
 
-  describe "Enumerable with no size" do
-    before do
-      @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-    end
-
-    describe "when no block is given" do
-      describe "returned Enumerator" do
-        it "size returns nil" do
-          expect(@object.min_by.size).to eq(nil)
+  describe 'Enumerable with no size' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns nil' do
+          enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+          expect(enum.min_by.size).to be_nil
         end
-      end
-    end
-  end
-
-  context "when called with an argument n" do
-    before :each do
-      @enum = EnumerableSpecs::Numerous.new(101, 55, 1, 20, 33, 500, 60)
-    end
-
-    context "without a block" do
-      it "returns an enumerator" do
-        expect(@enum.min_by(2)).to be_an_instance_of(Enumerator)
-      end
-    end
-
-    context "with a block" do
-      it "returns an array containing the minimum n elements based on the block's value" do
-        result = @enum.min_by(3) { |i| i.to_s }
-        expect(result).to eq([1, 101, 20])
-      end
-
-      context "on a enumerable of length x where x < n" do
-        it "returns an array containing the minimum n elements of length n" do
-          result = @enum.min_by(500) { |i| i.to_s }
-          expect(result.length).to eq(7)
-        end
-      end
-
-      context "when n is negative" do
-        it "raises an ArgumentError" do
-          expect { @enum.min_by(-1) { |i| i.to_s } }.to raise_error(ArgumentError)
-        end
-      end
-    end
-
-    context "when n is nil" do
-      it "returns the minimum element" do
-        expect(@enum.min_by(nil) { |i| i.to_s }).to eq(1)
       end
     end
   end

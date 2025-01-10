@@ -1,40 +1,67 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#minmax" do
-  before :each do
-    @enum = EnumerableSpecs::Numerous.new(6, 4, 5, 10, 8)
-    @empty_enum = EnumerableSpecs::Empty.new
-    @incomparable_enum = EnumerableSpecs::Numerous.new(BasicObject.new, BasicObject.new)
-    @incompatible_enum = EnumerableSpecs::Numerous.new(11,"22")
-    @strs = EnumerableSpecs::Numerous.new("333", "2", "60", "55555", "1010", "111")
+RSpec.describe 'Enumerable#minmax' do
+  it 'returns a 2-element array containing the minimum and the maximum elements' do
+    enum = EnumerableSpecs::Numerous.new(6, 4, 5, 10, 8)
+    expect(enum.minmax).to eq([4, 10])
   end
 
-  it "returns the minimum element" do
-    expect(@enum.minmax).to eq([4, 10])
-    expect(@strs.minmax).to eq(["1010", "60"])
+  it 'compares elements with #<=> method' do
+    a = double('a', value: 'a')
+    def a.<=>(o); value <=> o.value; end
+
+    b = double('b', value: 'b')
+    def b.<=>(o); value <=> o.value; end
+
+    c = double('c', value: 'c')
+    def c.<=>(o); value <=> o.value; end
+
+    expect(EnumerableSpecs::Numerous.new(a, c, b).minmax).to eq([a, c])
   end
 
-  it "returns the minimum when using a block rule" do
-    expect(@enum.minmax {|a,b| b <=> a }).to eq([10, 4])
-    expect(@strs.minmax {|a,b| a.length <=> b.length }).to eq(["2", "55555"])
+  it 'compares elements using a block when it is given' do
+    enum = EnumerableSpecs::Numerous.new(6, 4, 5, 10, 8)
+    expect(enum.minmax { |a, b| b <=> a }).to eq([10, 4])
   end
 
-  it "returns [nil, nil] for an empty Enumerable" do
-    expect(@empty_enum.minmax).to eq([nil, nil])
+  it 'returns [nil, nil] for an empty Enumerable' do
+    enum = EnumerableSpecs::Empty.new
+    expect(enum.minmax).to eq([nil, nil])
   end
 
-  it "raises a NoMethodError for elements without #<=>" do
-    expect { @incomparable_enum.minmax }.to raise_error(NoMethodError)
+  it 'returns [element, element] for an Enumerable with only one element' do
+    enum = EnumerableSpecs::Numerous.new(1)
+    expect(enum.minmax).to eq([1, 1])
   end
 
-  it "raises an ArgumentError when elements are incompatible" do
-    expect { @incompatible_enum.minmax }.to raise_error(ArgumentError)
-    expect { @enum.minmax{ |a, b| nil } }.to raise_error(ArgumentError)
+  it 'raises a NoMethodError for elements not responding to #<=>' do
+    enum = EnumerableSpecs::Numerous.new(BasicObject.new, BasicObject.new)
+
+    expect {
+      enum.minmax
+    }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
   end
 
-  it "gathers whole arrays as elements when each yields multiple" do
-    multi = EnumerableSpecs::YieldsMulti.new
-    expect(multi.minmax).to eq([[1, 2], [6, 7, 8, 9]])
+  it 'raises an ArgumentError when elements are incompatible' do
+    enum = EnumerableSpecs::Numerous.new(11, '22')
+
+    expect {
+      enum.minmax
+    }.to raise_error(ArgumentError, 'comparison of Integer with String failed')
+  end
+
+  context 'when #each yields multiple' do
+    it 'gathers whole arrays as elements' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      expect(multi.minmax).to eq([[1, 2], [6, 7, 8, 9]])
+    end
+
+    it 'yields whole arrays as elements' do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = Set.new
+      multi.minmax { |*args| yielded += args; 0 }
+      expect(yielded).to contain_exactly([1, 2], [3, 4, 5], [6, 7, 8, 9])
+    end
   end
 end
