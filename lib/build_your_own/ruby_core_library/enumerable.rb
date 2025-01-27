@@ -2,6 +2,15 @@ module BuildYourOwn
   module RubyCoreLibrary
     # Documentation from the Ruby Project
     module Enumerable
+      UNDEFINED = Object.new
+      private_constant :UNDEFINED
+
+      LONG_MAX = 2_147_483_647 # 2^31 - 1
+      private_constant :LONG_MAX
+
+      Pair = Data.define(:left, :right)
+      private_constant :Pair
+
       #  call-seq:
       #    all?                  -> true or false
       #    all?(pattern)         -> true or false
@@ -44,7 +53,24 @@ module BuildYourOwn
       #    {foo: 0, bar: 1, baz: 2}.all? {|key, value| value < 2 } # => false
       #
       #  Related: #any?, #none? #one?.
-      def all?
+      def all?(pattern = UNDEFINED)
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          check_result =
+            if pattern == UNDEFINED && block_given?
+              yield(*e)
+            elsif pattern == UNDEFINED && !block_given?
+              !!e
+            elsif pattern != UNDEFINED
+              warn 'given block not used' if block_given?
+              pattern === e
+            end
+
+          return false unless check_result
+        end
+
+        true
       end
 
       #  call-seq:
@@ -88,7 +114,24 @@ module BuildYourOwn
       #    {foo: 0, bar: 1, baz: 2}.any? {|key, value| value < 0 } # => false
       #
       #  Related: #all?, #none?, #one?.
-      def any?
+      def any?(pattern = UNDEFINED)
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          check_result =
+            if pattern == UNDEFINED && block_given?
+              yield(*e)
+            elsif pattern == UNDEFINED && !block_given?
+              !!e
+            elsif pattern != UNDEFINED
+              warn 'given block not used' if block_given?
+              pattern === e
+            end
+
+          return true if check_result
+        end
+
+        false
       end
 
       # call-seq:
@@ -99,7 +142,8 @@ module BuildYourOwn
       #
       #   e = (1..3).chain([4, 5])
       #   e.to_a #=> [1, 2, 3, 4, 5]
-      def chain
+      def chain(*enums)
+        Enumerator::Chain.new(self, *enums)
       end
 
       #  call-seq:
@@ -127,6 +171,58 @@ module BuildYourOwn
       #    e.next # => [2, [6, 7, 8]]
       #    e.next # => [3, [9, 10]]
       def chunk
+        return to_enum(:chunk) { enumerator_size } unless block_given?
+
+        Enumerator.new do |y|
+          value = nil
+          chunk = []
+
+          each do |*rest|
+            e = single_block_arg(rest)
+            block_result = yield e
+
+            if [:_separator, nil].include?(block_result)
+              unless chunk.empty?
+                y << [value, chunk]
+                value = nil
+                chunk = []
+              end
+
+              next
+            end
+
+            if block_result == :_alone
+              unless chunk.empty?
+                y << [value, chunk]
+                value = nil
+                chunk = []
+              end
+
+              y << [:_alone, [e]]
+              next
+            end
+
+            if block_result.is_a?(Symbol) && block_result.start_with?('_')
+              raise 'symbols beginning with an underscore are reserved'
+            end
+
+            if chunk.empty? # so it's the first chunk
+              value = block_result
+              chunk << e
+            elsif value == block_result # continue current chunk
+              chunk << e
+            else # return current chunk and start a new one
+              y << [value, chunk]
+              value = block_result
+              chunk = [e]
+            end
+          end
+
+          # the last not finished chunk
+          unless chunk.empty?
+            y << [value, chunk]
+          end
+        end
       end
 
       #  call-seq:
@@ -151,6 +247,34 @@ module BuildYourOwn
       #  Other methods of the Enumerator class and Enumerable module,
       #  such as +to_a+, +map+, etc., are also usable.
       def chunk_while
+        unless block_given?
+          raise ArgumentError, 'tried to create Proc object without a block'
+        end
+
+        Enumerator.new do |y|
+          current_chunk = []
+          previous = UNDEFINED
+
+          each do |*rest|
+            e = single_block_arg(rest)
+
+            if previous == UNDEFINED
+              current_chunk << e
+            elsif yield(previous, e) # rubocop:disable Lint/DuplicateBranch
+              current_chunk << e
+            else
+              # split
+              y << current_chunk
+              current_chunk = [e]
+            end
+
+            previous = e
+          end
+
+          unless current_chunk.empty?
+            y << current_chunk
+          end
+        end
       end
 
       #  call-seq:
@@ -161,6 +285,14 @@ module BuildYourOwn
       #    a = [nil, 0, nil, 'a', false, nil, false, nil, 'a', nil, 0, nil]
       #    a.compact # => [0, "a", false, false, "a", 0]
       def compact
+        array = []
+
+        each do |*rest|
+          e = single_block_arg(rest)
+          array << e unless e.nil?
+        end
+
+        array
       end
 
       # call-seq:
@@ -185,7 +317,34 @@ module BuildYourOwn
       #
       #   [0, 1, 2, 3].count {|element| element < 2}              # => 2
       #   {foo: 0, bar: 1, baz: 2}.count {|key, value| value < 2} # => 2
-      def count
+      def count(object = UNDEFINED)
+        if object == UNDEFINED && !block_given?
+          i = 0
+          each { i += 1 }
+
+          return i
+        end
+
+        # object given
+        if object != UNDEFINED
+          warn 'given block not used' if block_given?
+
+          i = 0
+          each do |*rest|
+            e = single_block_arg(rest)
+            i += 1 if object == e
+          end
+
+          return i
+        end
+
+        # block given
+        i = 0
+        each do |*rest|
+          i += 1 if yield(*rest)
+        end
+
+        i
       end
 
       #  call-seq:
@@ -211,7 +370,35 @@ module BuildYourOwn
       #  When called with a block and +n+ is +nil+, cycles forever.
       #
       #  When no block is given, returns an Enumerator.
-      def cycle
+      def cycle(n = nil)
+        unless block_given?
+          return to_enum(:cycle, n) {
+            if respond_to?(:size)
+              if n.nil?
+                Float::INFINITY
+              elsif n <= 0
+                0
+              else
+                size * n
+              end
+            end
+          }
+        end
+
+        n = to_integer!(n) unless n.nil?
+
+        elements = []
+        each do |*rest|
+          elements << single_block_arg(rest)
+        end
+
+        while n.nil? || (n -= 1) >= 0
+          elements.each do |e|
+            yield e
+          end
+        end
+
+        nil
       end
 
       #  call-seq:
@@ -229,7 +416,23 @@ module BuildYourOwn
       #
       #    h = {foo: 0, bar: 1, baz: 2, bat: 3}
       #    h.drop(2) # => [[:baz, 2], [:bat, 3]]
-      def drop
+      def drop(n)
+        n = to_integer!(n)
+        raise ArgumentError, 'attempt to drop negative size'         if n < 0
+        raise RangeError,    "bignum too big to convert into 'long'" if n > LONG_MAX
+
+        array = []
+        i = 0
+        each do |*rest|
+          if i < n
+            i += 1
+            next
+          else
+            array << single_block_arg(rest)
+          end
+        end
+
+        array
       end
 
       #  call-seq:
@@ -248,6 +451,19 @@ module BuildYourOwn
       #
       #  With no block given, returns an Enumerator.
       def drop_while
+        return to_enum(:drop_while) unless block_given?
+
+        array = []
+        skip = true
+        each do |*rest|
+          e = single_block_arg(rest)
+          if skip
+            skip &&= yield e
+          end
+          array << e unless skip
+        end
+
+        array
       end
 
       #  call-seq:
@@ -267,7 +483,37 @@ module BuildYourOwn
       #    a # => [[[:foo, 0], [:bar, 1]], [[:bar, 1], [:baz, 2]], [[:baz, 2], [:bam, 3]]]
       #
       #  With no block given, returns an Enumerator.
-      def each_cons
+      def each_cons(n)
+        n = to_integer!(n)
+        raise ArgumentError, 'invalid size'                          if n <= 0
+        raise RangeError,    "bignum too big to convert into 'long'" if n > LONG_MAX
+
+        unless block_given?
+          return to_enum(:each_cons, n) {
+            if respond_to?(:size)
+              n <= size ? size - n + 1 : 0
+            end
+          }
+        end
+
+        cons = []
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          if cons.size == n
+            cons = cons[1..]
+            cons << e
+            yield cons
+          else
+            cons << e
+
+            if cons.size == n
+              yield cons
+            end
+          end
+        end
+
+        self
       end
 
       #  call-seq:
@@ -304,7 +550,14 @@ module BuildYourOwn
       #    nil
       #
       #  With no block given, returns an Enumerator.
-      def each_entry
+      def each_entry(*)
+        return to_enum(:each_entry, *) { enumerator_size } unless block_given?
+
+        each(*) do |*rest|
+          yield single_block_arg(rest)
+        end
+
+        self
       end
 
       #  call-seq:
@@ -324,7 +577,36 @@ module BuildYourOwn
       #    a # => [[[:foo, 0], [:bar, 1]], [[:baz, 2], [:bat, 3]], [[:bam, 4]]]
       #
       #  With no block given, returns an Enumerator.
-      def each_slice
+      def each_slice(n)
+        n = to_integer!(n)
+        raise ArgumentError, 'invalid slice size'                    if n <= 0
+        raise RangeError,    "bignum too big to convert into 'long'" if n > LONG_MAX
+
+        unless block_given?
+          return to_enum(:each_slice, n) {
+            respond_to?(:size) ? size.ceildiv(n) : nil
+          }
+        end
+
+        slice = []
+        i = 0
+        each do |*rest|
+          e = single_block_arg(rest)
+          slice << e
+          i += 1
+
+          next unless i == n
+
+          yield slice
+          slice = []
+          i = 0
+        end
+
+        unless slice.empty?
+          yield slice
+        end
+
+        self
       end
 
       #  call-seq:
@@ -351,7 +633,17 @@ module BuildYourOwn
       #    a # => [[0, [:foo, 0]], [1, [:bar, 1]], [2, [:baz, 2]]]
       #
       #  With no block given, returns an Enumerator.
-      def each_with_index
+      def each_with_index(*)
+        return to_enum(:each_with_index, *) { enumerator_size } unless block_given?
+
+        i = 0
+        each(*) do |*rest|
+          e = single_block_arg(rest)
+          yield e, i
+          i += 1
+        end
+
+        self
       end
 
       #  call-seq:
@@ -368,7 +660,15 @@ module BuildYourOwn
       #    # => {0=>:foo, 1=>:bar, 2=>:baz}
       #
       #  With no block given, returns an Enumerator.
-      def each_with_object
+      def each_with_object(object)
+        return to_enum(:each_with_object, object) { enumerator_size } unless block_given?
+
+        each do |*rest|
+          e = single_block_arg(rest)
+          yield(e, object)
+        end
+
+        object
       end
 
       #  call-seq:
@@ -377,7 +677,14 @@ module BuildYourOwn
       #  Returns an array containing the items in +self+:
       #
       #    (0..4).to_a # => [0, 1, 2, 3, 4]
-      def entries
+      def entries(*)
+        array = []
+
+        each(*) do |*rest|
+          array << single_block_arg(rest)
+        end
+
+        array
       end
       alias to_a entries
 
@@ -395,6 +702,15 @@ module BuildYourOwn
       #
       # When no block given, returns an Enumerator.
       def filter_map
+        return to_enum(:filter_map) { enumerator_size } unless block_given?
+
+        array = []
+        each do |*rest|
+          block_result = yield(*rest)
+          array << block_result if block_result
+        end
+
+        array
       end
 
       # call-seq:
@@ -417,7 +733,28 @@ module BuildYourOwn
       #   {foo: 0, bar: 1, baz: 2}.find_index {|key, value| value > 1 }         # => 2
       #
       # With no argument and no block given, returns an Enumerator.
-      def find_index
+      def find_index(object = UNDEFINED)
+        return to_enum(:find_index) unless block_given? || object != UNDEFINED # rubocop:disable Lint/ToEnumArguments
+
+        if object != UNDEFINED && block_given?
+          warn 'warning: given block not used'
+        end
+
+        i = 0
+        each do |*rest|
+          found =
+            if object == UNDEFINED
+              yield(*rest)
+            else
+              object == single_block_arg(rest)
+            end
+
+          return i if found
+
+          i += 1
+        end
+
+        nil
       end
 
       # call-seq:
@@ -438,7 +775,15 @@ module BuildYourOwn
       #   {foo: 0, bar: 1, baz: 2}.find(proc {[]}) {|key, value| key.start_with?('c') } # => []
       #
       # With no block given, returns an Enumerator.
-      def find
+      def find(if_non_proc = nil)
+        return to_enum(:find, if_non_proc) unless block_given?
+
+        each do |*rest|
+          e = single_block_arg(rest)
+          return e if yield e
+        end
+
+        if_non_proc&.call
       end
       alias detect find
 
@@ -463,7 +808,18 @@ module BuildYourOwn
       #    %w[a b c d].first(50)             # => ["a", "b", "c", "d"]
       #    {foo: 1, bar: 1, baz: 2}.first(2) # => [[:foo, 1], [:bar, 1]]
       #    [].first(2)                       # => []
-      def first
+      def first(n = UNDEFINED)
+        if n == UNDEFINED
+          value = nil
+          each do |*rest| # rubocop:disable Lint/UnreachableLoop
+            value = single_block_arg(rest)
+            break
+          end
+
+          value
+        else
+          take(n)
+        end
       end
 
       # call-seq:
@@ -484,6 +840,22 @@ module BuildYourOwn
       #
       # Alias: #collect_concat.
       def flat_map
+        return to_enum(:flat_map) { enumerator_size } unless block_given?
+
+        array = []
+
+        each do |*rest|
+          block_result = yield(*rest)
+          as_array = to_array(block_result)
+
+          if as_array.nil?
+            array << block_result
+          else
+            array.concat(as_array)
+          end
+        end
+
+        array
       end
       alias collect_concat flat_map
 
@@ -509,7 +881,18 @@ module BuildYourOwn
       #    a.grep(/ar/) {|element| element.upcase } # => ["BAR", "CAR"]
       #
       #  Related: #grep_v.
-      def grep
+      def grep(pattern)
+        array = []
+
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          if pattern === e
+            array << (block_given? ? yield(e) : e)
+          end
+        end
+
+        array
       end
 
       # call-seq:
@@ -535,7 +918,18 @@ module BuildYourOwn
       #   a.grep_v(/ar/) {|element| element.upcase } # => ["FOO", "MOO"]
       #
       # Related: #grep.
-      def grep_v
+      def grep_v(pattern)
+        array = []
+
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          unless pattern === e
+            array << (block_given? ? yield(e) : e)
+          end
+        end
+
+        array
       end
 
       #  call-seq:
@@ -557,6 +951,18 @@ module BuildYourOwn
       #
       #  With no block given, returns an Enumerator.
       def group_by
+        return to_enum(:group_by) { enumerator_size } unless block_given?
+
+        hash = {}
+
+        each do |*rest|
+          e = single_block_arg(rest)
+          key = yield e
+          hash[key] ||= []
+          hash[key] << e
+        end
+
+        hash
       end
 
       #  call-seq:
@@ -572,7 +978,16 @@ module BuildYourOwn
       #    {foo: 0, bar: 1, baz: 2}.include?(:foo)  # => true
       #    {foo: 0, bar: 1, baz: 2}.include?('foo') # => false
       #    {foo: 0, bar: 1, baz: 2}.include?(0)     # => false
-      def include?
+      def include?(object)
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          if e == object
+            return true
+          end
+        end
+
+        false
       end
       alias member? include?
 
@@ -600,7 +1015,53 @@ module BuildYourOwn
       #
       #  +inject+ is aliased as +reduce+. You use it when you want to
       #  _reduce_ a collection to a single value.
-      def inject
+      def inject(*args)
+        initial_value = method_name = UNDEFINED
+
+        case args
+        in [initial_value, method_name]
+          if block_given?
+            warn 'warning: given block not used'
+          end
+        in [a]
+          if block_given?
+            initial_value = a
+          else
+            method_name = a
+          end
+        in []
+          unless block_given?
+            raise ArgumentError, 'wrong number of arguments (given 0, expected 1..2)'
+          end
+        else
+          raise ArgumentError, "wrong number of arguments (given #{args.size}, expected 1..2)"
+        end
+
+        accumulator = if initial_value == UNDEFINED
+                        nil
+                      else
+                        initial_value
+                      end
+
+        at_the_beginning = true
+
+        each do |*rest|
+          element = single_block_arg(rest)
+
+          if initial_value == UNDEFINED && at_the_beginning
+            at_the_beginning = false
+            accumulator = element
+            next
+          end
+
+          accumulator = if method_name == UNDEFINED
+                          yield accumulator, element
+                        else
+                          accumulator.send(method_name, element)
+                        end
+        end
+
+        accumulator
       end
       alias reduce inject
 
@@ -611,6 +1072,9 @@ module BuildYourOwn
       # methods to postpone enumeration and enumerate values only on an
       # as-needed basis.
       def lazy
+        Enumerator::Lazy.new(self, enumerator_size) do |yielder, *rest|
+          yielder.yield(*rest)
+        end
       end
 
       # call-seq:
@@ -627,6 +1091,14 @@ module BuildYourOwn
       #
       # With no block given, returns an Enumerator.
       def map
+        return to_enum(:map) { enumerator_size } unless block_given?
+
+        array = []
+        each do |*rest|
+          array << yield(*rest)
+        end
+
+        array
       end
       alias collect map
 
@@ -662,7 +1134,52 @@ module BuildYourOwn
       #  Returns an Enumerator if no block is given.
       #
       #  Related: #max, #minmax, #min_by.
-      def max_by
+      def max_by(n = UNDEFINED)
+        return to_enum(:max_by, n) { enumerator_size } unless block_given?
+
+        return_multiple = nil
+
+        if [UNDEFINED, nil].include?(n)
+          n = 1
+          return_multiple = false
+        else
+          n = to_integer!(n)
+          return_multiple = true
+
+          raise ArgumentError, 'negative size (-1)'                    if n < 0
+          raise RangeError,    "bignum too big to convert into 'long'" if n > LONG_MAX
+        end
+
+        # A better approach is to use the heap data structure which
+        # inserting/deleting operations has complexity O(log(n)).
+        # Use naive but straightforward approach instead for simplicity.
+        max_n = [] # N greatest elements
+
+        each do |*rest|
+          e = single_block_arg(rest)
+          block_result = yield e
+
+          if max_n.size < n || compare(block_result, max_n[n - 1].right) > 0 # block_result > max_n[n - 1].right
+            # insert
+            max_n << Pair.new(e, block_result)
+            i = max_n.size - 1
+            while i > 0 && compare(max_n[i - 1].right, max_n[i].right) < 0 # max_n[i - 1].right < max_n[i].right
+              max_n[i], max_n[i - 1] = max_n[i - 1], max_n[i]
+              i -= 1
+            end
+
+            # remove an extra element - the maximum one
+            if max_n.size > n
+              max_n.delete_at(n)
+            end
+          end
+        end
+
+        if return_multiple
+          max_n.map(&:left)
+        else
+          max_n.empty? ? nil : max_n[0].left
+        end
       end
 
       #  call-seq:
@@ -718,7 +1235,45 @@ module BuildYourOwn
       #    [].max(2) {|a, b| a <=> b }                          # => []
       #
       #  Related: #min, #minmax, #max_by.
-      def max
+      def max(n = UNDEFINED, &)
+        return_multiple = nil
+
+        if [UNDEFINED, nil].include?(n)
+          n = 1
+          return_multiple = false
+        else
+          n = to_integer!(n)
+          return_multiple = true
+
+          raise ArgumentError, 'negative size (-1)'                    if n < 0
+          raise RangeError,    "bignum too big to convert into 'long'" if n > LONG_MAX
+        end
+
+        # A better approach is to use the heap data structure which
+        # inserting/deleting operations has complexity O(log(n)).
+        # Use naive but straightforward approach instead for simplicity.
+        max_n = [] # N greatest elements
+
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          if max_n.size < n || compare(e, max_n[n - 1], &) > 0 # e > max_n.last
+            # insert
+            max_n << e
+            i = max_n.size - 1
+            while i > 0 && compare(max_n[i - 1], max_n[i], &) < 0 # max_n[i - 1] < max_n[i]
+              max_n[i], max_n[i - 1] = max_n[i - 1], max_n[i]
+              i -= 1
+            end
+
+            # remove an extra element - the smallest one
+            if max_n.size > n
+              max_n.delete_at(n)
+            end
+          end
+        end
+
+        return_multiple ? max_n : max_n[0]
       end
 
       #  call-seq:
@@ -753,7 +1308,52 @@ module BuildYourOwn
       #  Returns an Enumerator if no block is given.
       #
       #  Related: #min, #minmax, #max_by.
-      def min_by
+      def min_by(n = UNDEFINED)
+        return to_enum(:min_by, n) { enumerator_size } unless block_given?
+
+        return_multiple = nil
+
+        if [UNDEFINED, nil].include?(n)
+          n = 1
+          return_multiple = false
+        else
+          n = to_integer!(n)
+          return_multiple = true
+
+          raise ArgumentError, 'negative size (-1)'                    if n < 0
+          raise RangeError,    "bignum too big to convert into 'long'" if n > LONG_MAX
+        end
+
+        # A better approach is to use the heap data structure which
+        # inserting/deleting operations has complexity O(log(n)).
+        # Use naive but straightforward approach instead for simplicity.
+        min_n = [] # N smallest elements
+
+        each do |*rest|
+          e = single_block_arg(rest)
+          block_result = yield e
+
+          if min_n.size < n || compare(block_result, min_n[min_n.size - 1].right) < 0 # block_result < min_n.last[1]
+            # insert
+            min_n << Pair.new(e, block_result)
+            i = min_n.size - 1
+            while i > 0 && compare(min_n[i - 1].right, min_n[i].right) > 0 # min_n[i - 1].right > min_n[i].right
+              min_n[i], min_n[i - 1] = min_n[i - 1], min_n[i]
+              i -= 1
+            end
+
+            # remove an extra element - the maximum one
+            if min_n.size > n
+              min_n.delete_at(min_n.size - 1)
+            end
+          end
+        end
+
+        if return_multiple
+          min_n.map(&:left)
+        else
+          min_n.empty? ? nil : min_n[0].left
+        end
       end
 
       #  call-seq:
@@ -809,7 +1409,45 @@ module BuildYourOwn
       #    [].min(2) {|a, b| a <=> b }                          # => []
       #
       #  Related: #min_by, #minmax, #max.
-      def min
+      def min(n = UNDEFINED, &)
+        return_multiple = nil
+
+        if [UNDEFINED, nil].include?(n)
+          n = 1
+          return_multiple = false
+        else
+          n = to_integer!(n)
+          return_multiple = true
+
+          raise ArgumentError, 'negative size (-1)'                    if n < 0
+          raise RangeError,    "bignum too big to convert into 'long'" if n > LONG_MAX
+        end
+
+        # A better approach is to use the heap data structure which
+        # inserting/deleting operations has complexity O(log(n)).
+        # Use naive but straightforward approach instead for simplicity.
+        min_n = [] # N smallest elements
+
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          if min_n.size < n || compare(e, min_n[min_n.size - 1], &) < 0 # e < min_n.last
+            # insert
+            min_n << e
+            i = min_n.size - 1
+            while i > 0 && compare(min_n[i - 1], min_n[i], &) > 0 # min_n[i - 1] > min_n[i]
+              min_n[i], min_n[i - 1] = min_n[i - 1], min_n[i]
+              i -= 1
+            end
+
+            # remove an extra element - the maximum one
+            if min_n.size > n
+              min_n.delete_at(min_n.size - 1)
+            end
+          end
+        end
+
+        return_multiple ? min_n : min_n[0]
       end
 
       #  call-seq:
@@ -832,6 +1470,38 @@ module BuildYourOwn
       #
       #  Related: #max_by, #minmax, #min_by.
       def minmax_by
+        return to_enum(:minmax_by) { enumerator_size } unless block_given?
+
+        min_element = nil
+        min_value = nil
+        max_element = nil
+        max_value = nil
+        first_element = true
+
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          if first_element
+            first_element = false
+            min_element = max_element = e
+            min_value = max_value = yield e
+            next
+          end
+
+          block_result = yield e
+
+          if compare(min_value, block_result) > 0 # that's min_value > block_result
+            min_element = e
+            min_value = block_result
+          end
+
+          if compare(max_value, block_result) < 0 # that's max_value < block_result
+            max_element = e
+            max_value = block_result
+          end
+        end
+
+        [min_element, max_element]
       end
 
       #  call-seq:
@@ -861,7 +1531,29 @@ module BuildYourOwn
       #    [].minmax {|a, b| a <=> b }                          # => [nil, nil]
       #
       #  Related: #min, #max, #minmax_by.
-      def minmax
+      def minmax(&)
+        min = max = nil
+        first_element = true
+
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          if first_element
+            first_element = false
+            min = max = e
+            next
+          end
+
+          if compare(min, e, &) > 0 # that's min > e
+            min = e
+          end
+
+          if compare(max, e, &) < 0 # that's max < e
+            max = e
+          end
+        end
+
+        [min, max]
       end
 
       #  call-seq:
@@ -901,7 +1593,24 @@ module BuildYourOwn
       #    {foo: 0, bar: 1, baz: 2}.none? {|key, value| value < 1 } # => false
       #
       #  Related: #one?, #all?, #any?.
-      def none?
+      def none?(pattern = UNDEFINED)
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          check_result =
+            if pattern == UNDEFINED && block_given?
+              yield(*e)
+            elsif pattern == UNDEFINED && !block_given?
+              !!e
+            elsif pattern != UNDEFINED
+              warn 'given block not used' if block_given?
+              pattern === e
+            end
+
+          return false if check_result
+        end
+
+        true
       end
 
       #  call-seq:
@@ -944,7 +1653,30 @@ module BuildYourOwn
       #    {foo: 0, bar: 1, baz: 2}.one? {|key, value| value < 2 } # => false
       #
       #  Related: #none?, #all?, #any?.
-      def one?
+      def one?(pattern = UNDEFINED)
+        matches_count = 0
+
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          check_result =
+            if pattern == UNDEFINED && block_given?
+              yield(*e)
+            elsif pattern == UNDEFINED && !block_given?
+              !!e
+            elsif pattern != UNDEFINED
+              warn 'given block not used' if block_given?
+              pattern === e
+            end
+
+          matches_count += 1 if check_result
+
+          if matches_count >= 2
+            return false
+          end
+        end
+
+        matches_count == 1
       end
 
       #  call-seq:
@@ -972,6 +1704,22 @@ module BuildYourOwn
       #
       #  Related: Enumerable#group_by.
       def partition
+        return to_enum(:partition) { enumerator_size } unless block_given?
+
+        matched = []
+        not_matched = []
+
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          if yield(e)
+            matched << e
+          else
+            not_matched << e
+          end
+        end
+
+        [matched, not_matched]
       end
 
       # call-seq:
@@ -990,6 +1738,15 @@ module BuildYourOwn
       #
       # Related: #select.
       def reject
+        return to_enum(:reject) { enumerator_size } unless block_given?
+
+        array = []
+        each do |*rest|
+          block_result = single_block_arg(rest)
+          array << block_result unless yield block_result
+        end
+
+        array
       end
 
       #  call-seq:
@@ -1015,6 +1772,21 @@ module BuildYourOwn
       #
       #  With no block given, returns an Enumerator.
       def reverse_each
+        return to_enum(:reverse_each) { enumerator_size } unless block_given?
+
+        array = []
+
+        each do |*rest|
+          array << single_block_arg(rest)
+        end
+
+        i = array.size - 1
+        while i >= 0
+          yield array[i]
+          i -= 1
+        end
+
+        self
       end
 
       # call-seq:
@@ -1034,6 +1806,15 @@ module BuildYourOwn
       #
       # Related: #reject.
       def select
+        return to_enum(:select) { enumerator_size } unless block_given?
+
+        array = []
+        each do |*rest|
+          block_result = single_block_arg(rest)
+          array << block_result if yield block_result
+        end
+
+        array
       end
       alias find_all select
       alias filter select
@@ -1060,7 +1841,44 @@ module BuildYourOwn
       #
       #  Other methods of the Enumerator class and Enumerable module,
       #  such as +map+, etc., are also usable.
-      def slice_after
+      def slice_after(*args)
+        unless block_given?
+          if args.empty? # pattern not given
+            raise ArgumentError, 'wrong number of arguments (given 0, expected 1)'
+          end
+
+          if args.size > 1 # there are extra arguments
+            raise ArgumentError, "wrong number of arguments (given #{args.size}, expected 1)"
+          end
+        end
+
+        if block_given? && !args.empty? # given a block and a pattern
+          raise ArgumentError, 'both pattern and block are given'
+        end
+
+        pattern = args[0]
+
+        Enumerator.new do |y|
+          current_slice = []
+
+          each do |*rest|
+            e = single_block_arg(rest)
+            split_here = block_given? ? yield(e) : pattern === e
+
+            if split_here
+              # start new slice
+              current_slice << e
+              y << current_slice
+              current_slice = []
+            else
+              current_slice << e
+            end
+          end
+
+          unless current_slice.empty?
+            y << current_slice
+          end
+        end
       end
 
       #  call-seq:
@@ -1102,7 +1920,45 @@ module BuildYourOwn
       #
       #  Other methods of the Enumerator class and Enumerable module,
       #  such as +to_a+, +map+, etc., are also usable.
-      def slice_before
+      def slice_before(*args)
+        unless block_given?
+          if args.empty? # pattern not given
+            raise ArgumentError, 'wrong number of arguments (given 0, expected 1)'
+          end
+
+          if args.size > 1 # there are extra arguments
+            raise ArgumentError, "wrong number of arguments (given #{args.size}, expected 1)"
+          end
+        end
+
+        if block_given? && !args.empty? # given a block and a pattern
+          raise ArgumentError, "wrong number of arguments (given #{args.size}, expected 0)"
+        end
+
+        pattern = args[0]
+
+        Enumerator.new do |y|
+          current_slice = []
+
+          each do |*rest|
+            e = single_block_arg(rest)
+            split_here = block_given? ? yield(e) : pattern === e
+
+            if current_slice.empty? # the first element unconditionally starts a slice
+              current_slice << e
+            elsif split_here
+              # start new slice
+              y << current_slice
+              current_slice = [e]
+            else # rubocop:disable Lint/DuplicateBranch
+              current_slice << e
+            end
+          end
+
+          unless current_slice.empty?
+            y << current_slice
+          end
+        end
       end
 
       #  call-seq:
@@ -1127,6 +1983,34 @@ module BuildYourOwn
       #  Other methods of the Enumerator class and Enumerable module,
       #  such as +to_a+, +map+, etc., are also usable.
       def slice_when
+        unless block_given?
+          raise ArgumentError, 'tried to create Proc object without a block'
+        end
+
+        Enumerator.new do |y|
+          current_slice = []
+          previous = UNDEFINED
+
+          each do |*rest|
+            e = single_block_arg(rest)
+
+            if previous == UNDEFINED
+              current_slice << e
+            elsif yield(previous, e)
+              # split
+              y << current_slice
+              current_slice = [e]
+            else # rubocop:disable Lint/DuplicateBranch
+              current_slice << e
+            end
+
+            previous = e
+          end
+
+          unless current_slice.empty?
+            y << current_slice
+          end
+        end
       end
 
       #  call-seq:
@@ -1148,6 +2032,25 @@ module BuildYourOwn
       #
       #  With no block given, returns an Enumerator.
       def sort_by
+        return to_enum(:sort_by) { enumerator_size } unless block_given?
+
+        touples = []
+        each do |*rest|
+          e = single_block_arg(rest)
+          touples << Pair.new(e, yield(e))
+        end
+
+        # bubble sort
+        (0..touples.size - 2).each do |i|
+          (i + 1..touples.size - 1).each do |j|
+            determinator = compare(touples[i].right, touples[j].right)
+            if determinator > 0 # that's touples[i].right > touples[j].right
+              touples[i], touples[j] = touples[j], touples[i]
+            end
+          end
+        end
+
+        touples.map(&:left)
       end
 
       #  call-seq:
@@ -1179,7 +2082,23 @@ module BuildYourOwn
       #
       #  See also #sort_by. It implements a Schwartzian transform
       #  which is useful when key computation or comparison is expensive.
-      def sort
+      def sort(&)
+        array = []
+        each do |*rest|
+          array << single_block_arg(rest)
+        end
+
+        # bubble sort
+        (0..array.size - 2).each do |i|
+          (i + 1..array.size - 1).each do |j|
+            determinator = compare(array[i], array[j], &)
+            if determinator > 0 # that's array[i] > array[j]
+              array[i], array[j] = array[j], array[i]
+            end
+          end
+        end
+
+        array
       end
 
       #  call-seq:
@@ -1210,7 +2129,15 @@ module BuildYourOwn
       #    h = {a: 0, b: 1, c: 2, d: 3, e: 4, f: 5}
       #    h.sum {|key, value| value.odd? ? value : 0 } # => 9
       #    ('a'..'f').sum('x') {|c| c < 'd' ? c : '' }  # => "xabc"
-      def sum
+      def sum(initial_value = 0)
+        result = initial_value
+
+        each do |*rest|
+          n = block_given? ? yield(single_block_arg(rest)) : rest[0]
+          result += n
+        end
+
+        result
       end
 
       #  call-seq:
@@ -1224,7 +2151,21 @@ module BuildYourOwn
       #
       #    h = {foo: 0, bar: 1, baz: 2, bat: 3}
       #    h.take(2) # => [[:foo, 0], [:bar, 1]]
-      def take
+      def take(n)
+        n = to_integer!(n)
+
+        raise ArgumentError, 'attempt to take negative size'         if n < 0
+        raise RangeError,    "bignum too big to convert into 'long'" if n > LONG_MAX
+        return [] if n == 0
+
+        array = []
+        each do |*rest|
+          array << single_block_arg(rest)
+          n -= 1
+          break if n <= 0
+        end
+
+        array
       end
 
       #  call-seq:
@@ -1243,6 +2184,20 @@ module BuildYourOwn
       #
       #  With no block given, returns an Enumerator.
       def take_while
+        return to_enum(:take_while) unless block_given?
+
+        array = []
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          unless yield(*rest)
+            return array
+          end
+
+          array << e
+        end
+
+        array
       end
 
       #  call-seq:
@@ -1287,7 +2242,28 @@ module BuildYourOwn
       #      {foo: 'c', bar: 'd'}.tally(h) # => {[:foo, "a"]=>1, [:bar, "b"]=>1, [:foo, "c"]=>1, [:bar, "d"]=>1}
       #      {foo: 'a', bar: 'b'}.tally(h) # => {[:foo, "a"]=>2, [:bar, "b"]=>2, [:foo, "c"]=>1, [:bar, "d"]=>1}
       #      {foo: 'c', bar: 'd'}.tally(h) # => {[:foo, "a"]=>2, [:bar, "b"]=>2, [:foo, "c"]=>2, [:bar, "d"]=>2}
-      def tally
+      def tally(hash = {})
+        hash = to_hash!(hash)
+        if hash.frozen?
+          raise FrozenError, "can't modify frozen Hash: #{hash}"
+        end
+
+        each do |*rest|
+          e = single_block_arg(rest)
+
+          if hash.key?(e)
+            n = hash[e]
+            unless n.is_a?(Integer)
+              raise TypeError, "wrong argument type #{n.class} (expected Integer)"
+            end
+
+            hash[e] = n + 1
+          else
+            hash[e] = 1
+          end
+        end
+
+        hash
       end
 
       #  call-seq:
@@ -1308,11 +2284,31 @@ module BuildYourOwn
       #
       #  Raises an exception if an element of +self+ is not a 2-element array,
       #  and a block is not passed.
-      def to_h
+      def to_h(*)
+        h = {}
+
+        each(*) do |*rest|
+          e = block_given? ? yield(*rest) : rest[0]
+          array = to_array(e)
+
+          if array.nil?
+            raise TypeError, "wrong element type #{e.class} (expected array)"
+          end
+
+          if array.size != 2
+            raise ArgumentError, "element has wrong array length (expected 2, was #{array.size})"
+          end
+
+          key, value = array
+          h[key] = value
+        end
+
+        h
       end
 
       # Makes a set from the enumerable object with given arguments.
-      def to_set
+      def to_set(klass = Set, *, &)
+        klass.new(self, *, &)
       end
 
       #  call-seq:
@@ -1333,6 +2329,20 @@ module BuildYourOwn
       #    a = %w[a b c d e e d c b a a b c d e]
       #    a.uniq {|c| c < 'c' }         # => ["a", "c"]
       def uniq
+        set = Set.new
+        array = []
+
+        each do |*rest|
+          e = single_block_arg(rest)
+          key = block_given? ? yield(*rest) : e
+
+          unless set.include?(key)
+            set << key
+            array << e
+          end
+        end
+
+        array
       end
 
       #  call-seq:
@@ -1398,7 +2408,120 @@ module BuildYourOwn
       #    [:a1, :b1, :c1]
       #    [:a2, :b2, :c2]
       #    [:a3, :b3, :c3]
-      def zip
+      def zip(*enums)
+        enumerators = enums.map { |e|
+          unless e.respond_to?(:each)
+            raise TypeError, "wrong argument type #{e.class} (must respond to :each)"
+          end
+
+          e.to_enum(:each)
+        }
+
+        arrays = []
+
+        each do |*rest|
+          e = single_block_arg(rest)
+          array = [e]
+
+          enumerators.each do |enumerator|
+            begin
+              value = enumerator.next
+            rescue StopIteration
+              value = nil
+            end
+            array << value
+          end
+
+          if block_given?
+            yield array
+          else
+            arrays << array
+          end
+        end
+
+        unless block_given?
+          arrays
+        end
+      end
+
+      private
+
+      # MRI: rb_enum_values_pack
+      def single_block_arg(arguments)
+        return nil          if arguments.empty?
+        return arguments[0] if arguments.size == 1
+
+        arguments
+      end
+
+      # MRI: enum_size
+      def enumerator_size
+        respond_to?(:size) ? size : nil
+      end
+
+      # MRI: rb_num2long
+      def to_integer!(object)
+        return object if object.is_a? Integer
+
+        raise TypeError, 'no implicit conversion from nil to integer'             if object.nil?
+        raise TypeError, "no implicit conversion of #{object.class} into Integer" unless object.respond_to? :to_int
+
+        value = object.to_int
+        unless value.is_a? Integer
+          raise TypeError, "can't convert #{object.class} to Integer (#{object.class}#to_int gives #{value.class})"
+        end
+
+        value
+      end
+
+      # MRI: rb_check_array_type
+      def to_array(object)
+        return object if object.is_a? Array
+        return nil    if object.nil?
+        return nil    unless object.respond_to? :to_ary
+
+        as_array = object.to_ary
+        if as_array.nil?
+          return nil
+        end
+
+        unless as_array.is_a? Array
+          raise TypeError, "can't convert #{object.class} to Array (#{object.class}#to_ary gives #{as_array.class})"
+        end
+
+        as_array
+      end
+
+      # MRI: rb_to_hash_type
+      def to_hash!(object)
+        return object if object.is_a? Hash
+
+        raise TypeError, 'no implicit conversion of nil into Hash'             if object.nil?
+        raise TypeError, "no implicit conversion of #{object.class} into Hash" unless object.respond_to? :to_hash
+
+        as_hash = object.to_hash
+        unless as_hash.is_a? Hash
+          raise TypeError, "can't convert #{object.class} to Hash (#{object.class}#to_hash gives #{as_hash.class})"
+        end
+
+        as_hash
+      end
+
+      def compare(a, b)
+        determinator = block_given? ? yield(a, b) : a <=> b
+
+        if determinator.nil?
+          # MRI: rb_cmperr
+          b_string = if b == true || b == false || b.nil? || b.is_a?(Integer) || b.is_a?(Float)
+                       b.inspect
+                     else
+                       b.class.name
+                     end
+
+          raise ArgumentError, "comparison of #{a.class} with #{b_string} failed"
+        end
+
+        determinator
       end
     end
   end

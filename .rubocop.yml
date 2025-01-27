@@ -24,6 +24,12 @@ Style/BlockComments:
 Style/BlockDelimiters:
   Enabled: false
 
+Style/CaseEquality:
+  Enabled: false
+
+Style/DoubleNegation:
+  Enabled: false
+
 Style/EmptyMethod:
   Enabled: false
 
@@ -33,7 +39,19 @@ Style/ExplicitBlockArgument:
 Style/FrozenStringLiteralComment:
   Enabled: false
 
+Style/GuardClause:
+  Enabled: false
+
+Style/IfUnlessModifier:
+  Enabled: false
+
 Style/MapIntoArray:
+  Enabled: false
+
+Style/Next:
+  Enabled: false
+
+Style/NumericPredicate:
   Enabled: false
 
 Style/PerlBackrefs:
@@ -66,13 +84,22 @@ Layout/MultilineBlockLayout:
 
 # Metrics
 
+Metrics/AbcSize:
+  Enabled: false
+
 Metrics/BlockLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
   Enabled: false
 
 Metrics/MethodLength:
   Enabled: false
 
 Metrics/ModuleLength:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
   Enabled: false
 
 
