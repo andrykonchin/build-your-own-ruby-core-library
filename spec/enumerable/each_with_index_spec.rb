@@ -14,7 +14,7 @@ RSpec.describe "Enumerable#each_with_index" do
 
   it "provides each element to the block" do
     acc = []
-    obj = EnumerableSpecs::EachDefiner.new()
+    obj = EnumerableSpecs::Empty.new()
     res = obj.each_with_index {|a,i| acc << [a,i]}
     expect(acc).to eq([])
     expect(obj).to eq(res)
@@ -40,8 +40,8 @@ RSpec.describe "Enumerable#each_with_index" do
     expect(e.to_a).to eq([[2, 0], [5, 1], [3, 2], [6, 3], [1, 4], [4, 5]])
   end
 
-  it "passes extra parameters to each" do
-    count = EnumerableSpecs::EachCounter.new(:apple)
+  it "passes extra arguments to #each" do
+    count = EnumerableSpecs::EachWithParameters.new(:apple)
     e = count.each_with_index(:foo, :bar)
     expect(e.to_a).to eq([[:apple, 0]])
     expect(count.arguments_passed).to eq([:foo, :bar])
@@ -50,12 +50,9 @@ RSpec.describe "Enumerable#each_with_index" do
   describe "Enumerable with size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-        end
-
         it "size returns the enumerable size" do
-          expect(@object.each_with_index.size).to eq(@object.size)
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.each_with_index.size).to eq(enum.size)
         end
       end
     end
@@ -64,12 +61,8 @@ RSpec.describe "Enumerable#each_with_index" do
   describe "Enumerable with no size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-        end
-
         it "size returns nil" do
-          expect(@object.each_with_index.size).to eq(nil)
+          expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).each_with_index.size).to eq(nil)
         end
       end
     end

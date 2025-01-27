@@ -39,28 +39,21 @@ RSpec.describe "Enumerable#min_by" do
   end
 
   describe "Enumerable with size" do
-    before do
-      @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-    end
-
     describe "when no block is given" do
       describe "returned Enumerator" do
         it "size returns the enumerable size" do
-          expect(@object.min_by.size).to eq(@object.size)
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.min_by.size).to eq(enum.size)
         end
       end
     end
   end
 
   describe "Enumerable with no size" do
-    before do
-      @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-    end
-
     describe "when no block is given" do
       describe "returned Enumerator" do
         it "size returns nil" do
-          expect(@object.min_by.size).to eq(nil)
+          expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).min_by.size).to eq(nil)
         end
       end
     end

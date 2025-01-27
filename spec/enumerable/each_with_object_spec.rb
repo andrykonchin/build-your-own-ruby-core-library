@@ -39,28 +39,21 @@ RSpec.describe "Enumerable#each_with_object" do
   end
 
   describe "Enumerable with size" do
-    before :all do
-      @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-    end
-
     describe "when no block is given" do
       describe "returned Enumerator" do
         it "size returns the enumerable size" do
-          expect(@object.each_with_object([]).size).to eq(@object.size)
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.each_with_object([]).size).to eq(enum.size)
         end
       end
     end
   end
 
   describe "Enumerable with no size" do
-    before :all do
-      @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-    end
-
     describe "when no block is given" do
       describe "returned Enumerator" do
         it "size returns nil" do
-          expect(@object.each_with_object([]).size).to eq(nil)
+          expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).each_with_object([]).size).to eq(nil)
         end
       end
     end

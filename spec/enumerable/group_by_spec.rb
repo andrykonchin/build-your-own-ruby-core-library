@@ -35,12 +35,9 @@ RSpec.describe "Enumerable#group_by" do
   describe "Enumerable with size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-        end
-
         it "size returns the enumerable size" do
-          expect(@object.group_by.size).to eq(@object.size)
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.group_by.size).to eq(enum.size)
         end
       end
     end
@@ -49,12 +46,8 @@ RSpec.describe "Enumerable#group_by" do
   describe "Enumerable with no size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-        end
-
         it "size returns nil" do
-          expect(@object.group_by.size).to eq(nil)
+          expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).group_by.size).to eq(nil)
         end
       end
     end

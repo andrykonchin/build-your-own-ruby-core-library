@@ -2,16 +2,11 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe "Enumerable#chunk" do
-  before do
-    ScratchPad.record []
-  end
-
   it "returns an Enumerator if called without a block" do
-    chunk = EnumerableSpecs::Numerous.new(1, 2, 3, 1, 2).chunk
-    expect(chunk).to be_an_instance_of(Enumerator)
-
-    result = chunk.with_index {|elt, i| elt - i }.to_a
-    expect(result).to eq [[1, [1, 2, 3]], [-2, [1, 2]]]
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.chunk).to be_an_instance_of(Enumerator)
+    expect(enum.chunk.to_a).to eq([])
+    expect(enum.chunk.each { |i| i < 3 }.to_a).to eq([[true, [1, 2]], [false, [3, 4]]])
   end
 
   it "returns an Enumerator if given a block" do
@@ -20,8 +15,9 @@ RSpec.describe "Enumerable#chunk" do
 
   it "yields the current element and the current chunk to the block" do
     e = EnumerableSpecs::Numerous.new(1, 2, 3)
-    e.chunk { |x| ScratchPad << x }.to_a
-    expect(ScratchPad.recorded).to eq [1, 2, 3]
+    yielded = []
+    e.chunk { |x| yielded << x }.to_a
+    expect(yielded).to eq [1, 2, 3]
   end
 
   it "returns elements of the Enumerable in an Array of Arrays, [v, ary], where 'ary' contains the consecutive elements for which the block returned the value 'v'" do
@@ -43,8 +39,9 @@ RSpec.describe "Enumerable#chunk" do
 
   it "yields Arrays as a single argument to a rest argument" do
     e = EnumerableSpecs::Numerous.new([1, 2])
-    e.chunk { |*x| ScratchPad << x }.to_a
-    expect(ScratchPad.recorded).to eq [[[1,2]]]
+    yielded = []
+    e.chunk { |*x| yielded << x }.to_a
+    expect(yielded).to eq [[[1,2]]]
   end
 
   it "does not return elements for which the block returns :_separator" do
@@ -61,7 +58,7 @@ RSpec.describe "Enumerable#chunk" do
 
   it "raises a RuntimeError if the block returns a Symbol starting with an underscore other than :_alone or :_separator" do
     e = EnumerableSpecs::Numerous.new(1, 2, 3, 2, 1)
-    expect { e.chunk { |x| :_arbitrary }.to_a }.to raise_error(RuntimeError)
+    expect { e.chunk { |x| :_arbitrary }.to_a }.to raise_error(RuntimeError, "symbols beginning with an underscore are reserved")
   end
 
   it "does not accept arguments" do
@@ -71,9 +68,62 @@ RSpec.describe "Enumerable#chunk" do
     }.to raise_error(ArgumentError)
   end
 
+  describe "when #each yields multiple values" do
+    it "yields multiple values as array when block accepts a single parameter" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.chunk { |e| yielded << e; true }.to_a
+      expect(yielded).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
+    end
+
+    it "yields multiple values as array when block accepts multiple parameters" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.chunk { |*args| yielded << args }.to_a
+      expect(yielded).to eq([[[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]]])
+    end
+  end
+
   it 'returned Enumerator size returns nil' do
     e = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 2, 1)
     enum = e.chunk { |x| true }
     expect(enum.size).to be nil
+  end
+
+  describe "Enumerable with size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        it "size returns the enumerable size" do
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.chunk.size).to eq(enum.size)
+        end
+      end
+    end
+
+    context "when a block is given" do
+      describe "returned Enumerator" do
+        it "size returns nil" do
+          expect(EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4).chunk { true }.size).to eq(nil)
+        end
+      end
+    end
+  end
+
+  describe "Enumerable with no size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        it "size returns nil" do
+          expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).chunk.size).to eq(nil)
+        end
+      end
+    end
+
+    context "when a block is given" do
+      describe "returned Enumerator" do
+        it "size returns nil" do
+          expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).chunk { true }.size).to eq(nil)
+        end
+      end
+    end
   end
 end

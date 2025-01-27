@@ -15,7 +15,7 @@ RSpec.describe "Enumerable#all?" do
   end
 
   it "raises an ArgumentError when more than 1 argument is provided" do
-    expect { @enum.all?(1, 2, 3) }.to raise_error(ArgumentError)
+    expect { @enum.all?(1, 2, 3) }.to raise_error(ArgumentError, "wrong number of arguments (given 3, expected 0..1)")
   end
 
   it "does not hide exceptions out of #each" do
@@ -107,18 +107,21 @@ RSpec.describe "Enumerable#all?" do
       }.to raise_error(RuntimeError)
     end
 
-    it "gathers initial args as elements when each yields multiple" do
-      multi = EnumerableSpecs::YieldsMulti.new
-      yielded = []
-      expect(multi.all? { |e| yielded << e }).to be true
-      expect(yielded).to eq [1, 3, 6]
-    end
+    # TODO: add such specs everywhere (for destructuring)
+    describe "when #each yields multiple values" do
+      it "yields multiple arguments when block accepts a single parameter" do
+        multi = EnumerableSpecs::YieldsMulti.new
+        yielded = []
+        expect(multi.all? { |e| yielded << e }).to be true
+        expect(yielded).to eq [1, 3, 6]
+      end
 
-    it "yields multiple arguments when each yields multiple" do
-      multi = EnumerableSpecs::YieldsMulti.new
-      yielded = []
-      expect(multi.all? { |*args| yielded << args }).to be true
-      expect(yielded).to eq [[1, 2], [3, 4, 5], [6, 7, 8, 9]]
+      it "yields multiple arguments when block accepts multiple parameters" do
+        multi = EnumerableSpecs::YieldsMulti.new
+        yielded = []
+        expect(multi.all? { |*args| yielded << args }).to be true
+        expect(yielded).to eq [[1, 2], [3, 4, 5], [6, 7, 8, 9]]
+      end
     end
   end
 

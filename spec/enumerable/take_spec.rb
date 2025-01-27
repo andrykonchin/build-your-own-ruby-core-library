@@ -3,7 +3,7 @@ require_relative 'fixtures/classes'
 
 RSpec.describe "Enumerable#take" do
   it "requires an argument" do
-    expect{ EnumerableSpecs::Numerous.new.take}.to raise_error(ArgumentError)
+    expect{ EnumerableSpecs::Numerous.new.take}.to raise_error(ArgumentError, "wrong number of arguments (given 0, expected 1)")
   end
 
   describe "when passed an argument" do
@@ -33,7 +33,7 @@ RSpec.describe "Enumerable#take" do
     end
 
     it "raises an ArgumentError when count is negative" do
-      expect { @enum.take(-1) }.to raise_error(ArgumentError)
+      expect { @enum.take(-1) }.to raise_error(ArgumentError, "attempt to take negative size")
     end
 
     it "returns the entire array when count > length" do
@@ -41,18 +41,25 @@ RSpec.describe "Enumerable#take" do
       expect(@enum.take(8)).to eq(@values)  # See redmine #1686 !
     end
 
-    it "tries to convert the passed argument to an Integer using #to_int" do
-      obj = double('to_int')
-      expect(obj).to receive(:to_int).at_most(:twice).and_return(3) # called twice, no apparent reason. See redmine #1554
-      expect(@enum.take(obj)).to eq([4, 3, 2])
-    end
+    describe 'argument conversion to Integer' do
+      it "tries to convert the passed argument to an Integer using #to_int" do
+        obj = double('to_int')
+        expect(obj).to receive(:to_int).at_most(:twice).and_return(3) # called twice, no apparent reason. See redmine #1554
+        expect(@enum.take(obj)).to eq([4, 3, 2])
+      end
 
-    it "raises a TypeError if the passed argument is not numeric" do
-      expect { @enum.take(nil) }.to raise_error(TypeError)
-      expect { @enum.take("a") }.to raise_error(TypeError)
+      it "raises a TypeError if the passed argument is not numeric" do
+        expect { @enum.take(nil) }.to raise_error(TypeError, "no implicit conversion from nil to integer")
+        expect { @enum.take("a") }.to raise_error(TypeError, "no implicit conversion of String into Integer")
 
-      obj = double("nonnumeric")
-      expect { @enum.take(obj) }.to raise_error(TypeError)
+        obj = double("nonnumeric")
+        expect { @enum.take(obj) }.to raise_error(TypeError)
+      end
+
+      it "raises a TypeError if the passed argument is not numeric and #to_int returns non-Integer value" do
+        obj = double("n", to_int: "a")
+        expect { @enum.take(obj) }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")
+      end
     end
 
     it "gathers whole arrays as elements when each yields multiple" do

@@ -31,7 +31,7 @@ RSpec.describe "Enumerable#count" do
     expect(EnumerableSpecs::Numerous.new(nil, nil, nil, false).count(nil)).to eq(3)
   end
 
-  it "accepts an argument for comparison using ==" do
+  it "compares an argument with elements using #==" do
     expect(@numerous.count(2)).to eq(2)
   end
 
@@ -45,13 +45,22 @@ RSpec.describe "Enumerable#count" do
     }.to complain(/given block not used/)
   end
 
-  describe "when each yields multiple values" do
-    it "gathers initial args as elements" do
+  describe "when #each yields multiple values" do
+    it "yields multiple arguments when block accepts a single parameter" do
       multi = EnumerableSpecs::YieldsMulti.new
-      expect(multi.count {|e| e == 1 }).to eq(1)
+      yielded = []
+      expect(multi.count {|e| yielded << e; true }).to eq(3)
+      expect(yielded).to eq([1, 3, 6])
     end
 
-    it "accepts an argument for comparison using ==" do
+    it "yields multiple arguments when block accepts multiple parameters" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      expect(multi.count {|*args| yielded << args; true }).to eq(3)
+      expect(yielded).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
+    end
+
+    it "compares an argument with elements using #==" do
       multi = EnumerableSpecs::YieldsMulti.new
       expect(multi.count([1, 2])).to eq(1)
     end

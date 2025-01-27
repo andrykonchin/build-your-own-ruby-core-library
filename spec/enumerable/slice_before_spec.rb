@@ -62,12 +62,8 @@ RSpec.describe "Enumerable#slice_before" do
   describe "Enumerable with size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-        end
-
         it "size returns nil" do
-          expect(@object.slice_before(3).size).to eq(nil)
+          expect(EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4).slice_before(3).size).to eq(nil)
         end
       end
     end
@@ -76,12 +72,8 @@ RSpec.describe "Enumerable#slice_before" do
   describe "Enumerable with no size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-        end
-
         it "size returns nil" do
-          expect(@object.slice_before(3).size).to eq(nil)
+          expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).slice_before(3).size).to eq(nil)
         end
       end
     end

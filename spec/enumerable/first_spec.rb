@@ -16,11 +16,6 @@ RSpec.describe "Enumerable#first" do
     expect(EnumerableSpecs::YieldsMixed2.new.to_enum.first).to eq(nil)
   end
 
-  it "raises a RangeError when passed a Bignum" do
-    enum = EnumerableSpecs::Empty.new
-    expect { enum.first(bignum_value) }.to raise_error(RangeError)
-  end
-
   describe "when passed an argument" do
     before :each do
       @values = [4,3,2,1,0,-1]
@@ -48,7 +43,14 @@ RSpec.describe "Enumerable#first" do
     end
 
     it "raises an ArgumentError when count is negative" do
-      expect { @enum.first(-1) }.to raise_error(ArgumentError)
+      expect { @enum.first(-1) }.to raise_error(ArgumentError, "attempt to take negative size")
+    end
+
+    it "raises a RangeError when passed a Bignum" do
+      enum = EnumerableSpecs::Empty.new
+      expect {
+        enum.first(bignum_value)
+      }.to raise_error(RangeError, "bignum too big to convert into 'long'")
     end
 
     it "returns the entire array when count > length" do
@@ -56,23 +58,25 @@ RSpec.describe "Enumerable#first" do
       expect(@enum.first(8)).to eq(@values)  # See redmine #1686 !
     end
 
-    it "tries to convert the passed argument to an Integer using #to_int" do
-      obj = double('to_int')
-      expect(obj).to receive(:to_int).at_most(:twice).and_return(3) # called twice, no apparent reason. See redmine #1554
-      expect(@enum.first(obj)).to eq([4, 3, 2])
-    end
+    describe 'argument conversion to Integer' do
+      it "tries to convert the passed argument to an Integer using #to_int" do
+        obj = double('to_int')
+        expect(obj).to receive(:to_int).at_most(:twice).and_return(3) # called twice, no apparent reason. See redmine #1554
+        expect(@enum.first(obj)).to eq([4, 3, 2])
+      end
 
-    it "raises a TypeError if the passed argument is not numeric" do
-      expect { @enum.first(nil) }.to raise_error(TypeError)
-      expect { @enum.first("a") }.to raise_error(TypeError)
+      it "raises a TypeError if the passed argument is not numeric" do
+        expect { @enum.first(nil) }.to raise_error(TypeError, "no implicit conversion from nil to integer")
+        expect { @enum.first("a") }.to raise_error(TypeError, "no implicit conversion of String into Integer")
 
-      obj = double("nonnumeric")
-      expect { @enum.first(obj) }.to raise_error(TypeError)
-    end
+        obj = double("nonnumeric")
+        expect { @enum.first(obj) }.to raise_error(TypeError)
+      end
 
-    it "gathers whole arrays as elements when each yields multiple" do
-      multi = EnumerableSpecs::YieldsMulti.new
-      expect(multi.first(1)).to eq([[1, 2]])
+      it "raises a TypeError if the passed argument is not numeric and #to_int returns non-Integer value" do
+        obj = double("n", to_int: "a")
+        expect { @enum.first(obj) }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")
+      end
     end
 
     it "consumes only what is needed" do
@@ -82,6 +86,11 @@ RSpec.describe "Enumerable#first" do
       expect(counter.first(2)).to eq([1,2])
       expect(counter.times_called).to eq(1)
       expect(counter.times_yielded).to eq(2)
+    end
+
+    it "gathers whole arrays as elements when #each yields multiple" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      expect(multi.first(1)).to eq([[1, 2]])
     end
   end
 end

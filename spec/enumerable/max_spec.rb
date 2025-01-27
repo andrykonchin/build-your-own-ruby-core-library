@@ -3,8 +3,8 @@ require_relative 'fixtures/classes'
 
 RSpec.describe "Enumerable#max" do
   before :each do
-    @e_strs = EnumerableSpecs::EachDefiner.new("333", "22", "666666", "1", "55555", "1010101010")
-    @e_ints = EnumerableSpecs::EachDefiner.new( 333,   22,   666666,   55555, 1010101010)
+    @e_strs = EnumerableSpecs::Numerous.new("333", "22", "666666", "1", "55555", "1010101010")
+    @e_ints = EnumerableSpecs::Numerous.new( 333,   22,   666666,   55555, 1010101010)
   end
 
   it "returns the maximum element" do
@@ -12,51 +12,51 @@ RSpec.describe "Enumerable#max" do
   end
 
   it "returns the maximum element (basics cases)" do
-    expect(EnumerableSpecs::EachDefiner.new(55).max).to eq(55)
+    expect(EnumerableSpecs::Numerous.new(55).max).to eq(55)
 
-    expect(EnumerableSpecs::EachDefiner.new(11,99).max).to eq(99)
-    expect(EnumerableSpecs::EachDefiner.new(99,11).max).to eq(99)
-    expect(EnumerableSpecs::EachDefiner.new(2, 33, 4, 11).max).to eq(33)
+    expect(EnumerableSpecs::Numerous.new(11,99).max).to eq(99)
+    expect(EnumerableSpecs::Numerous.new(99,11).max).to eq(99)
+    expect(EnumerableSpecs::Numerous.new(2, 33, 4, 11).max).to eq(33)
 
-    expect(EnumerableSpecs::EachDefiner.new(1,2,3,4,5).max).to eq(5)
-    expect(EnumerableSpecs::EachDefiner.new(5,4,3,2,1).max).to eq(5)
-    expect(EnumerableSpecs::EachDefiner.new(1,4,3,5,2).max).to eq(5)
-    expect(EnumerableSpecs::EachDefiner.new(5,5,5,5,5).max).to eq(5)
+    expect(EnumerableSpecs::Numerous.new(1,2,3,4,5).max).to eq(5)
+    expect(EnumerableSpecs::Numerous.new(5,4,3,2,1).max).to eq(5)
+    expect(EnumerableSpecs::Numerous.new(1,4,3,5,2).max).to eq(5)
+    expect(EnumerableSpecs::Numerous.new(5,5,5,5,5).max).to eq(5)
 
-    expect(EnumerableSpecs::EachDefiner.new("aa","tt").max).to eq("tt")
-    expect(EnumerableSpecs::EachDefiner.new("tt","aa").max).to eq("tt")
-    expect(EnumerableSpecs::EachDefiner.new("2","33","4","11").max).to eq("4")
+    expect(EnumerableSpecs::Numerous.new("aa","tt").max).to eq("tt")
+    expect(EnumerableSpecs::Numerous.new("tt","aa").max).to eq("tt")
+    expect(EnumerableSpecs::Numerous.new("2","33","4","11").max).to eq("4")
 
     expect(@e_strs.max).to eq("666666")
     expect(@e_ints.max).to eq(1010101010)
   end
 
   it "returns nil for an empty Enumerable" do
-    expect(EnumerableSpecs::EachDefiner.new.max).to eq(nil)
+    expect(EnumerableSpecs::Empty.new.max).to eq(nil)
   end
 
   it "raises a NoMethodError for elements without #<=>" do
     expect do
-      EnumerableSpecs::EachDefiner.new(BasicObject.new, BasicObject.new).max
+      EnumerableSpecs::Numerous.new(BasicObject.new, BasicObject.new).max
     end.to raise_error(NoMethodError)
   end
 
   it "raises an ArgumentError for incomparable elements" do
     expect do
-      EnumerableSpecs::EachDefiner.new(11,"22").max
+      EnumerableSpecs::Numerous.new(11,"22").max
     end.to raise_error(ArgumentError)
     expect do
-      EnumerableSpecs::EachDefiner.new(11,12,22,33).max{|a, b| nil}
+      EnumerableSpecs::Numerous.new(11,12,22,33).max{|a, b| nil}
     end.to raise_error(ArgumentError)
   end
 
   context "when passed a block" do
     it "returns the maximum element" do
-      expect(EnumerableSpecs::EachDefiner.new("2","33","4","11").max {|a,b| a <=> b }).to eq("4")
-      expect(EnumerableSpecs::EachDefiner.new( 2 , 33 , 4 , 11 ).max {|a,b| a <=> b }).to eq(33)
+      expect(EnumerableSpecs::Numerous.new("2","33","4","11").max {|a,b| a <=> b }).to eq("4")
+      expect(EnumerableSpecs::Numerous.new( 2 , 33 , 4 , 11 ).max {|a,b| a <=> b }).to eq(33)
 
-      expect(EnumerableSpecs::EachDefiner.new("2","33","4","11").max {|a,b| b <=> a }).to eq("11")
-      expect(EnumerableSpecs::EachDefiner.new( 2 , 33 , 4 , 11 ).max {|a,b| b <=> a }).to eq(2)
+      expect(EnumerableSpecs::Numerous.new("2","33","4","11").max {|a,b| b <=> a }).to eq("11")
+      expect(EnumerableSpecs::Numerous.new( 2 , 33 , 4 , 11 ).max {|a,b| b <=> a }).to eq(2)
 
       expect(@e_strs.max {|a,b| a.length <=> b.length }).to eq("1010101010")
 

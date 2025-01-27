@@ -7,7 +7,16 @@ RSpec.describe "Enumerable#take_while" do
   end
 
   it "returns an Enumerator if no block given" do
-    expect(@enum.take_while).to be_an_instance_of(Enumerator)
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.take_while).to be_an_instance_of(Enumerator)
+    expect(enum.take_while.to_a).to eq([1])
+    expect(enum.take_while.each { |i| i < 3 }).to eq([1, 2])
+  end
+
+  it "passes elements to the block until the first false" do
+    a = []
+    expect(@enum.take_while{|obj| (a << obj).size < 3}).to eq([3, 2])
+    expect(a).to eq([3, 2, 1])
   end
 
   it "returns no/all elements for {true/false} block" do
@@ -20,14 +29,8 @@ RSpec.describe "Enumerable#take_while" do
     expect(@enum.take_while{nil}).to eq([])
   end
 
-  it "passes elements to the block until the first false" do
-    a = []
-    expect(@enum.take_while{|obj| (a << obj).size < 3}).to eq([3, 2])
-    expect(a).to eq([3, 2, 1])
-  end
-
-  it "will only go through what's needed" do
-    enum = EnumerableSpecs::EachCounter.new(4, 3, 2, 1, :stop)
+  it "will only go through what is needed" do
+    enum = EnumerableSpecs::EachCounter.new(4, 3, 2, 1)
     expect(enum.take_while { |x|
       break 42 if x == 3
       true
@@ -35,26 +38,33 @@ RSpec.describe "Enumerable#take_while" do
     expect(enum.times_yielded).to eq(2)
   end
 
-  it "doesn't return self when it could" do
-    a = [1,2,3]
-    expect(a.take_while{true}).not_to equal(a)
+  it "does not return self when it could" do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+    expect(enum.take_while{true}).not_to equal(enum)
   end
 
-  it "calls the block with initial args when yielded with multiple arguments" do
-    yields = []
-    EnumerableSpecs::YieldsMixed.new.take_while{ |v| yields << v }
-    expect(yields).to eq([1, [2], 3, 5, [8, 9], nil, []])
+  describe "when #each yields multiple values" do
+    it "yields multiple arguments when block accepts a single parameter" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.take_while { |e| yielded << e; true }
+      expect(yielded).to eq([1, 3, 6])
+    end
+
+    it "yields multiple arguments when block accepts multiple parameters" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.take_while { |*args| yielded << args; true }
+      expect(yielded).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
+    end
   end
 
   describe "Enumerable with size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before :all do
-          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-        end
-
         it "size returns nil" do
-          expect(@object.take_while.size).to eq(nil)
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4).take_while
+          expect(enum.size).to eq(nil)
         end
       end
     end
@@ -63,11 +73,9 @@ RSpec.describe "Enumerable#take_while" do
   describe "Enumerable with no size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before :all do
-          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-        end
         it "size returns nil" do
-          expect(@object.take_while.size).to eq(nil)
+          enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4).take_while
+          expect(enum.size).to eq(nil)
         end
       end
     end

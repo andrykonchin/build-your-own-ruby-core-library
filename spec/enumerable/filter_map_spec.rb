@@ -21,4 +21,40 @@ RSpec.describe 'Enumerable#filter_map' do
   it 'returns an enumerator when no block given' do
     expect(@numerous.filter_map).to be_an_instance_of(Enumerator)
   end
+
+  describe "when #each yields multiple values" do
+    it "yields multiple arguments when block accepts a single parameter" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.filter_map { |e| yielded << e; false }
+      expect(yielded).to eq([1, 3, 6])
+    end
+
+    it "yields multiple arguments when block accepts multiple parameters" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.filter_map { |*args| yielded << args; false }
+      expect(yielded).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
+    end
+  end
+
+  describe "Enumerable with size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        it "size returns the enumerable size" do
+          expect(EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4).filter_map.size).to eq(4)
+        end
+      end
+    end
+  end
+
+  describe "Enumerable with no size" do
+    describe "when no block is given" do
+      describe "returned Enumerator" do
+        it "size returns nil" do
+          expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).filter_map.size).to eq(nil)
+        end
+      end
+    end
+  end
 end

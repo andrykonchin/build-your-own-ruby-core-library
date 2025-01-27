@@ -12,12 +12,12 @@ RSpec.describe "Enumerable#drop_while" do
 
   it "returns no/all elements for {true/false} block" do
     expect(@enum.drop_while{true}).to eq([])
-    expect(@enum.drop_while{false}).to eq(@enum.to_a)
+    expect(@enum.drop_while{false}).to eq([3, 2, 1, :go])
   end
 
   it "accepts returns other than true/false" do
     expect(@enum.drop_while{1}).to eq([])
-    expect(@enum.drop_while{nil}).to eq(@enum.to_a)
+    expect(@enum.drop_while{nil}).to eq([3, 2, 1, :go])
   end
 
   it "passes elements to the block until the first false" do
@@ -42,9 +42,30 @@ RSpec.describe "Enumerable#drop_while" do
     expect(a.drop_while{false}).not_to equal(a)
   end
 
-  it "gathers whole arrays as elements when each yields multiple" do
-    multi = EnumerableSpecs::YieldsMulti.new
-    expect(multi.drop_while {|e| e != [6, 7, 8, 9] }).to eq([[6, 7, 8, 9]])
+  describe "when #each yields multiple values" do
+    it "yields multiple values as array when block accepts a single parameter" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.drop_while { |e| yielded << e; true }
+      expect(yielded).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
+    end
+
+    it "gathers multiple values as array when block accepts a single parameter" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      expect(multi.drop_while { |e| false }).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
+    end
+
+    it "yields multiple arguments when block accepts multiple parameters" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      yielded = []
+      multi.drop_while { |*args| yielded << args; true }
+      expect(yielded).to eq([[[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]]])
+    end
+
+    it "gathers multiple values as array when block accepts multiple parameters" do
+      multi = EnumerableSpecs::YieldsMulti.new
+      expect(multi.drop_while { |*args| false }).to eq([[1, 2], [3, 4, 5], [6, 7, 8, 9]])
+    end
   end
 
   describe "Enumerable with size" do

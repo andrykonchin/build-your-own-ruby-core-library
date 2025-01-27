@@ -93,14 +93,10 @@ RSpec.describe "Enumerable#each_slice" do
     end
 
     describe "Enumerable with no size" do
-      before do
-        @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-      end
-
       describe "when no block is given" do
         describe "returned Enumerator" do
           it "size returns nil" do
-            expect(@object.each_slice(8).size).to eq(nil)
+            expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).each_slice(8).size).to eq(nil)
           end
         end
       end

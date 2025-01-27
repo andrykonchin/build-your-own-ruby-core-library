@@ -3,7 +3,7 @@ require_relative 'fixtures/classes'
 
 RSpec.describe "Enumerable#grep" do
   before :each do
-    @a = EnumerableSpecs::EachDefiner.new( 2, 4, 6, 8, 10)
+    @a = EnumerableSpecs::Numerous.new( 2, 4, 6, 8, 10)
   end
 
   it "grep without a block should return an array of all elements === pattern" do
@@ -19,7 +19,7 @@ RSpec.describe "Enumerable#grep" do
   end
 
   it "grep the enumerable (rubycon legacy)" do
-    expect(EnumerableSpecs::EachDefiner.new().grep(1)).to eq([])
+    expect(EnumerableSpecs::Empty.new().grep(1)).to eq([])
     expect(@a.grep(3..7)).to eq([4,6])
     expect(@a.grep(3..7) {|a| a+1}).to eq([5,7])
   end

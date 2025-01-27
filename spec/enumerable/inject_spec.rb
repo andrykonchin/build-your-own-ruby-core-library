@@ -6,7 +6,7 @@ RSpec.describe "Enumerable#inject" do
     a = []
     EnumerableSpecs::Numerous.new.inject(0) { |memo, i| a << [memo, i]; i }
     expect(a).to eq([[0, 2], [2, 5], [5, 3], [3, 6], [6, 1], [1, 4]])
-    expect(EnumerableSpecs::EachDefiner.new(true, true, true).inject(nil) {|result, i| i && result}).to eq(nil)
+    expect(EnumerableSpecs::Numerous.new(true, true, true).inject(nil) {|result, i| i && result}).to eq(nil)
   end
 
   it "produces an array of the accumulator and the argument when given a block with a *arg" do
@@ -72,33 +72,33 @@ RSpec.describe "Enumerable#inject" do
 
   it "with inject arguments(legacy rubycon)" do
     # with inject argument
-    expect(EnumerableSpecs::EachDefiner.new().inject(1) {|acc,x| 999 }).to eq(1)
-    expect(EnumerableSpecs::EachDefiner.new(2).inject(1) {|acc,x| 999 }).to eq(999)
-    expect(EnumerableSpecs::EachDefiner.new(2).inject(1) {|acc,x| acc }).to eq(1)
-    expect(EnumerableSpecs::EachDefiner.new(2).inject(1) {|acc,x| x }).to eq(2)
+    expect(EnumerableSpecs::Empty.new().inject(1) {|acc,x| 999 }).to eq(1)
+    expect(EnumerableSpecs::Numerous.new(2).inject(1) {|acc,x| 999 }).to eq(999)
+    expect(EnumerableSpecs::Numerous.new(2).inject(1) {|acc,x| acc }).to eq(1)
+    expect(EnumerableSpecs::Numerous.new(2).inject(1) {|acc,x| x }).to eq(2)
 
-    expect(EnumerableSpecs::EachDefiner.new(1,2,3,4).inject(100) {|acc,x| acc + x }).to eq(110)
-    expect(EnumerableSpecs::EachDefiner.new(1,2,3,4).inject(100) {|acc,x| acc * x }).to eq(2400)
+    expect(EnumerableSpecs::Numerous.new(1,2,3,4).inject(100) {|acc,x| acc + x }).to eq(110)
+    expect(EnumerableSpecs::Numerous.new(1,2,3,4).inject(100) {|acc,x| acc * x }).to eq(2400)
 
-    expect(EnumerableSpecs::EachDefiner.new('a','b','c').inject("z") {|result, i| i+result}).to eq("cbaz")
+    expect(EnumerableSpecs::Numerous.new('a','b','c').inject("z") {|result, i| i+result}).to eq("cbaz")
   end
 
   it "without inject arguments(legacy rubycon)" do
     # no inject argument
-    expect(EnumerableSpecs::EachDefiner.new(2).inject {|acc,x| 999 }) .to eq(2)
-    expect(EnumerableSpecs::EachDefiner.new(2).inject {|acc,x| acc }).to eq(2)
-    expect(EnumerableSpecs::EachDefiner.new(2).inject {|acc,x| x }).to eq(2)
+    expect(EnumerableSpecs::Numerous.new(2).inject {|acc,x| 999 }) .to eq(2)
+    expect(EnumerableSpecs::Numerous.new(2).inject {|acc,x| acc }).to eq(2)
+    expect(EnumerableSpecs::Numerous.new(2).inject {|acc,x| x }).to eq(2)
 
-    expect(EnumerableSpecs::EachDefiner.new(1,2,3,4).inject {|acc,x| acc + x }).to eq(10)
-    expect(EnumerableSpecs::EachDefiner.new(1,2,3,4).inject {|acc,x| acc * x }).to eq(24)
+    expect(EnumerableSpecs::Numerous.new(1,2,3,4).inject {|acc,x| acc + x }).to eq(10)
+    expect(EnumerableSpecs::Numerous.new(1,2,3,4).inject {|acc,x| acc * x }).to eq(24)
 
-    expect(EnumerableSpecs::EachDefiner.new('a','b','c').inject {|result, i| i+result}).to eq("cba")
-    expect(EnumerableSpecs::EachDefiner.new(3, 4, 5).inject {|result, i| result*i}).to eq(60)
-    expect(EnumerableSpecs::EachDefiner.new([1], 2, 'a','b').inject{|r,i| r<<i}).to eq([1, 2, 'a', 'b'])
+    expect(EnumerableSpecs::Numerous.new('a','b','c').inject {|result, i| i+result}).to eq("cba")
+    expect(EnumerableSpecs::Numerous.new(3, 4, 5).inject {|result, i| result*i}).to eq(60)
+    expect(EnumerableSpecs::Numerous.new([1], 2, 'a','b').inject{|r,i| r<<i}).to eq([1, 2, 'a', 'b'])
   end
 
   it "returns nil when fails(legacy rubycon)" do
-    expect(EnumerableSpecs::EachDefiner.new().inject {|acc,x| 999 }).to eq(nil)
+    expect(EnumerableSpecs::Empty.new().inject {|acc,x| 999 }).to eq(nil)
   end
 
   it "tolerates increasing a collection size during iterating Array" do # TODO: replace Array with object

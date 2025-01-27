@@ -54,12 +54,9 @@ RSpec.describe "Enumerable#flat_map" do
   describe "Enumerable with size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
-        end
-
         it "size returns the enumerable size" do
-          expect(@object.flat_map.size).to eq(@object.size)
+          enum = EnumerableSpecs::NumerousWithSize.new(1, 2, 3, 4)
+          expect(enum.flat_map.size).to eq(enum.size)
         end
       end
     end
@@ -68,12 +65,8 @@ RSpec.describe "Enumerable#flat_map" do
   describe "Enumerable with no size" do
     describe "when no block is given" do
       describe "returned Enumerator" do
-        before do
-          @object = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
-        end
-
         it "size returns nil" do
-          expect(@object.flat_map.size).to eq(nil)
+          expect(EnumerableSpecs::Numerous.new(1, 2, 3, 4).flat_map.size).to eq(nil)
         end
       end
     end
