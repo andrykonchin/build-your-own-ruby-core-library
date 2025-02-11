@@ -25,8 +25,8 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#one?" do
-  it "returns whether exactly one element is truthy" do
+RSpec.describe 'Enumerable#one?' do
+  it 'returns whether exactly one element is truthy' do
     enum = EnumerableSpecs::Numerous.new(1, false, false)
     expect(enum.one?).to be true
 
@@ -43,24 +43,24 @@ RSpec.describe "Enumerable#one?" do
     expect(enum.one?).to be false
   end
 
-  it "always returns false on empty enumeration" do
+  it 'always returns false on empty enumeration' do
     enum = EnumerableSpecs::Empty.new
     expect(enum.one?).to be false
   end
 
-  it "gathers whole arrays as elements when #each yields multiple" do
+  it 'gathers whole arrays as elements when #each yields multiple' do
     multi = EnumerableSpecs::YieldsMultiWithSingleTrue.new
     expect(multi.one?).to be false
   end
 
-  describe "given a block" do
-    it "returns whether the block returns a truthy value for exactly one element" do
+  describe 'given a block' do
+    it 'returns whether the block returns a truthy value for exactly one element' do
       enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
       expect(enum.one? { |i| i == 1 }).to be true
       expect(enum.one? { |i| i > 2 }).to be false
     end
 
-    it "yields multiple arguments when #each yields multiple values" do
+    it 'yields multiple arguments when #each yields multiple values' do
       multi = EnumerableSpecs::YieldsMulti.new
       yielded = []
       multi.one? { |*args| yielded << args; false }
@@ -69,27 +69,27 @@ RSpec.describe "Enumerable#one?" do
   end
 
   describe 'given a pattern argument' do
-    it "returns whether for exactly one element, pattern === element" do
-      enum = EnumerableSpecs::Numerous.new("a", "ab", "abc", "abcd")
+    it 'returns whether for exactly one element, pattern === element' do
+      enum = EnumerableSpecs::Numerous.new('a', 'ab', 'abc', 'abcd')
       expect(enum.one?(/d/)).to be true
 
-      enum = EnumerableSpecs::Numerous.new("a", "ab", "abc", "abcd")
+      enum = EnumerableSpecs::Numerous.new('a', 'ab', 'abc', 'abcd')
       expect(enum.one?(/b/)).to be false
     end
 
-    it "calls `#===` on the pattern" do
+    it 'calls `#===` on the pattern' do
       enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
       pattern = EnumerableSpecs::Pattern.new { false }
       enum.one?(pattern)
       expect(pattern.yielded).to contain_exactly([1], [2], [3], [4])
     end
 
-    it "always returns false on empty enumeration" do
+    it 'always returns false on empty enumeration' do
       enum = EnumerableSpecs::Empty.new
       expect(enum.one?(Integer)).to be false
     end
 
-    it "handles nil value as a pattern as well" do
+    it 'handles nil value as a pattern as well' do
       enum = EnumerableSpecs::Numerous.new(1, false, false)
       expect(enum.one?(nil)).to be false
 
@@ -97,15 +97,15 @@ RSpec.describe "Enumerable#one?" do
       expect(enum.one?(nil)).to be false
     end
 
-    it "calls the pattern with gathered array when yields multiple arguments" do
+    it 'calls the pattern with gathered array when yields multiple arguments' do
       multi = EnumerableSpecs::YieldsMulti.new
       pattern = EnumerableSpecs::Pattern.new { false }
       multi.one?(pattern)
       expect(pattern.yielded).to contain_exactly([[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]])
     end
 
-    it "ignores the block if there is an argument" do
-      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4, "5")
+    it 'ignores the block if there is an argument' do
+      enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4, '5')
 
       expect {
         expect(enum.one?(String) { false }).to be true

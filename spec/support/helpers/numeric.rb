@@ -22,11 +22,11 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 
 def nan_value
-  0/0.0
+  0 / 0.0
 end
 
 def infinity_value
-  1/0.0
+  1 / 0.0
 end
 
 def bignum_value(plus = 0)

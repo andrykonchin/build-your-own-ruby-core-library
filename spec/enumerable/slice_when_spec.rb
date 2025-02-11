@@ -25,27 +25,27 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#slice_when" do
-  context "when given a block" do
-    it "returns an enumerator" do
+RSpec.describe 'Enumerable#slice_when' do
+  context 'when given a block' do
+    it 'returns an enumerator' do
       enum = EnumerableSpecs::Numerous.new
-      expect(enum.slice_when { |i, j| true }).to be_an_instance_of(Enumerator)
+      expect(enum.slice_when { true }).to be_an_instance_of(Enumerator)
     end
 
-    it "yields each element with the next one" do
+    it 'yields each element with the next one' do
       enum = EnumerableSpecs::Numerous.new(10, 9, 7, 6, 4, 3, 2, 1)
       yielded = []
-      enum.slice_when { |i, j| yielded << [i, j] ; i - 1 != j }.to_a
+      enum.slice_when { |i, j| yielded << [i, j]; i - 1 != j }.to_a
       expect(yielded).to eq([[10, 9], [9, 7], [7, 6], [6, 4], [4, 3], [3, 2], [2, 1]])
     end
 
-    it "splits chunks between adjacent elements i and j where the block returns true" do
+    it 'splits chunks between adjacent elements i and j where the block returns true' do
       enum = EnumerableSpecs::Numerous.new(10, 9, 7, 6, 4, 3, 2, 1)
       result = enum.slice_when { |i, j| i - 1 != j }
       expect(result.to_a).to eq([[10, 9], [7, 6], [4, 3, 2, 1]])
     end
 
-    it "calls the block for length of the receiver enumerable minus one times" do
+    it 'calls the block for length of the receiver enumerable minus one times' do
       ary = [10, 9, 7, 6, 4, 3, 2, 1]
       enum = EnumerableSpecs::Numerous.new(*ary)
       enum_length = ary.length
@@ -59,37 +59,37 @@ RSpec.describe "Enumerable#slice_when" do
     end
   end
 
-  context "when not given a block" do
-    it "raises an ArgumentError" do
+  context 'when not given a block' do
+    it 'raises an ArgumentError' do
       enum = EnumerableSpecs::Numerous.new
-      expect { enum.slice_when }.to raise_error(ArgumentError, "tried to create Proc object without a block")
+      expect { enum.slice_when }.to raise_error(ArgumentError, 'tried to create Proc object without a block')
     end
   end
 
-  context "on a single-element enumerable" do
-    it "ignores the block and returns an enumerator that yields [element]" do
+  context 'on a single-element enumerable' do
+    it 'ignores the block and returns an enumerator that yields [element]' do
       enum = EnumerableSpecs::Numerous.new(1)
-      expect(enum.slice_when {|x| raise }.to_a).to eq [[1]]
+      expect(enum.slice_when { raise }.to_a).to eq([[1]]) # rubocop:disable Lint/UnreachableLoop
     end
   end
 
-  context "on an empty enumerable" do
-    it "returns an empty enumerator" do
+  context 'on an empty enumerable' do
+    it 'returns an empty enumerator' do
       enum = EnumerableSpecs::Empty.new
-      expect(enum.slice_when {|x| raise }.to_a).to eq []
+      expect(enum.slice_when { raise }.to_a).to eq([]) # rubocop:disable Lint/UnreachableLoop
     end
   end
 
-  context "when #each yields multiple values" do
-    it "gathers whole arrays as elements" do
+  context 'when #each yields multiple values' do
+    it 'gathers whole arrays as elements' do
       multi = EnumerableSpecs::YieldsMulti.new
-      expect(multi.slice_when {|i, j| false }.to_a).to eq([[[1, 2], [3, 4, 5], [6, 7, 8, 9]]])
+      expect(multi.slice_when { false }.to_a).to eq([[[1, 2], [3, 4, 5], [6, 7, 8, 9]]])
     end
 
-    it "yields whole arrays as elements" do
+    it 'yields whole arrays as elements' do
       multi = EnumerableSpecs::YieldsMulti.new
       yielded = []
-      multi.slice_when {|i, j| yielded << [i, j]; false }.to_a
+      multi.slice_when { |i, j| yielded << [i, j]; false }.to_a
       expect(yielded).to eq([[[1, 2], [3, 4, 5]], [[3, 4, 5], [6, 7, 8, 9]]])
     end
   end

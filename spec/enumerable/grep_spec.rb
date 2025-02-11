@@ -25,13 +25,13 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Enumerable#grep" do
-  it "returns an array of objects based on elements of self that match the given pattern" do
-    enum = EnumerableSpecs::Numerous.new("a", "b", "ab", "bc")
-    expect(enum.grep(/a/)).to contain_exactly("a", "ab")
+RSpec.describe 'Enumerable#grep' do
+  it 'returns an array of objects based on elements of self that match the given pattern' do
+    enum = EnumerableSpecs::Numerous.new('a', 'b', 'ab', 'bc')
+    expect(enum.grep(/a/)).to contain_exactly('a', 'ab')
   end
 
-  it "returns an array containing each element for which `pattern === element` is true" do
+  it 'returns an array containing each element for which `pattern === element` is true' do
     enum = EnumerableSpecs::Numerous.new(1, -2, 3, -4)
 
     pattern = Object.new
@@ -42,20 +42,20 @@ RSpec.describe "Enumerable#grep" do
     expect(enum.grep(pattern)).to contain_exactly(1, 3)
   end
 
-  it "gathers whole arrays as elements when #each yields multiple" do
+  it 'gathers whole arrays as elements when #each yields multiple' do
     multi = EnumerableSpecs::YieldsMulti.new
     pattern = EnumerableSpecs::Pattern.new { true }
     expect(multi.grep(pattern)).to contain_exactly([1, 2], [3, 4, 5], [6, 7, 8, 9])
     expect(pattern.yielded).to contain_exactly([[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]])
   end
 
-  context "given a block" do
-    it "calls the block with each matching element and returns an array containing each object returned by the block" do
-      enum = EnumerableSpecs::Numerous.new("a", "b", "ab", "bc")
+  context 'given a block' do
+    it 'calls the block with each matching element and returns an array containing each object returned by the block' do
+      enum = EnumerableSpecs::Numerous.new('a', 'b', 'ab', 'bc')
       expect(enum.grep(/a/) { |s| s.to_sym }).to contain_exactly(:a, :ab)
     end
 
-    it "yields multiple values as array when #each yields multiple" do
+    it 'yields multiple values as array when #each yields multiple' do
       multi = EnumerableSpecs::YieldsMulti.new
       pattern = EnumerableSpecs::Pattern.new { true }
       yielded = []
@@ -63,24 +63,24 @@ RSpec.describe "Enumerable#grep" do
       expect(yielded).to contain_exactly([[1, 2]], [[3, 4, 5]], [[6, 7, 8, 9]])
     end
 
-    it "can use $~ in the block when used with a Regexp" do
+    it 'can use $~ in the block when used with a Regexp' do
       skip "it's unclear how to implement in pure Ruby"
 
-      ary = EnumerableSpecs::Numerous.new("aba", "aba")
-      expect(ary.grep(/a(b)a/) { $1 }).to eq(["b", "b"])
+      ary = EnumerableSpecs::Numerous.new('aba', 'aba')
+      expect(ary.grep(/a(b)a/) { $1 }).to eq(%w[b b])
     end
 
-    it "sets $~ in the block" do
+    it 'sets $~ in the block' do
       skip "it's unclear how to implement in pure Ruby"
 
-      "z" =~ /z/ # Reset $~
-      EnumerableSpecs::Numerous.new("abc", "def").grep(/b/) { |e|
-        expect(e).to eq("abc")
-        expect($&).to eq("b")
+      'z' =~ /z/ # Reset $~
+      EnumerableSpecs::Numerous.new('abc', 'def').grep(/b/) { |e|
+        expect(e).to eq('abc')
+        expect($&).to eq('b')
       }
 
       # Set by the failed match of "def"
-      expect($~).to eq(nil)
+      expect($~).to be_nil
     end
   end
 end

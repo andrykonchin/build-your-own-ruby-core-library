@@ -45,7 +45,7 @@ RSpec.describe 'Enumerable#sum' do
       expect(enum.sum(1) { |e| e * 10 }).to eq(1 + 10 + 20 + 30 + 40)
     end
 
-    it "yields multiple arguments as array when #each yields multiple values" do
+    it 'yields multiple arguments as array when #each yields multiple values' do
       multi = EnumerableSpecs::YieldsMulti.new
       yielded = []
       multi.sum { |*args| yielded << args; 0 }

@@ -58,11 +58,11 @@ module EnumerableSpecs
     attr_reader :times_called
 
     def initialize(*list)
-      super(*list)
+      super
       @times_called = 0
     end
 
-    def each(*arg)
+    def each(*_arg)
       @times_called += 1
 
       @list.each do |i|
@@ -103,9 +103,9 @@ module EnumerableSpecs
     include BuildYourOwn::RubyCoreLibrary::Enumerable
 
     def each
-      yield 1,2
-      yield 3,4,5
-      yield 6,7,8,9
+      yield 1, 2
+      yield 3, 4, 5
+      yield 6, 7, 8, 9
     end
   end
 
@@ -113,9 +113,9 @@ module EnumerableSpecs
     include BuildYourOwn::RubyCoreLibrary::Enumerable
 
     def each
-      yield false,2
-      yield false,4,5
-      yield false,7,8,9
+      yield false, 2
+      yield false, 4, 5
+      yield false, 7, 8, 9
     end
   end
 
@@ -123,9 +123,9 @@ module EnumerableSpecs
     include BuildYourOwn::RubyCoreLibrary::Enumerable
 
     def each
-      yield false,2
-      yield true,4,5
-      yield false,7,8,9
+      yield false, 2
+      yield true, 4, 5
+      yield false, 7, 8, 9
     end
   end
 
@@ -145,7 +145,7 @@ module EnumerableSpecs
   end
 
   class Uncomparable
-    def <=>(obj)
+    def <=>(_other)
       nil
     end
   end
@@ -170,9 +170,9 @@ module EnumerableSpecs
   class SetSubclassWithParameters < Set
     attr_reader :arguments_passed
 
-    def initialize(enum, *args, &block)
-      super(enum, &block)
+    def initialize(enum, *args, &)
+      super(enum, &)
       @arguments_passed = args
     end
   end
-end # EnumerableSpecs utility classes
+end
