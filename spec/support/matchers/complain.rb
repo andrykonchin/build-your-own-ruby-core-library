@@ -14,9 +14,9 @@ module BuildYourOwn
             @actual_message = nil
           end
 
-          def matches?(given_proc, negative_expectation=false)
+          def matches?(given_proc, _negative_expectation = false) # rubocop:disable Style/OptionalBooleanParameter
             @given_proc = given_proc
-            return false unless Proc === given_proc
+            return false unless given_proc.is_a?(Proc)
 
             saved_err = $stderr
             verbose = $VERBOSE
@@ -38,7 +38,7 @@ module BuildYourOwn
           end
 
           def does_not_match?(given_proc)
-            !matches?(given_proc, :negative_expectation) && Proc === given_proc
+            !matches?(given_proc, :negative_expectation) && given_proc.is_a?(Proc)
           end
 
           def supports_block_expectations?
@@ -56,8 +56,8 @@ module BuildYourOwn
           # @return [String]
           def failure_message
             if @expected_message.nil?
-              ["Expected a warning", "but received none"]
-            elsif @expected_message.kind_of? Regexp
+              ['Expected a warning', 'but received none']
+            elsif @expected_message.is_a? Regexp
               ["Expected warning to match: #{@expected_message.inspect}", "but got: #{@actual_message.chomp.inspect}"]
             else
               ["Expected warning: #{@expected_message.inspect}", "but got: #{@actual_message.chomp.inspect}"]
@@ -67,8 +67,8 @@ module BuildYourOwn
           # @return [String]
           def failure_message_when_negated
             if @expected_message.nil?
-              ["Unexpected warning: ", @actual_message.chomp.inspect]
-            elsif @expected_message.kind_of? Regexp
+              ['Unexpected warning: ', @actual_message.chomp.inspect]
+            elsif @expected_message.is_a? Regexp
               ["Expected warning not to match: #{@expected_message.inspect}", "but got: #{@actual_message.chomp.inspect}"]
             else
               ["Expected warning: #{@expected_message.inspect}", "but got: #{@actual_message.chomp.inspect}"]
@@ -102,8 +102,8 @@ end
 
 module RSpec
   module Matchers
-    def complain(message=nil, **options)
-      BuildYourOwn::RubyCoreLirary::RSpec::Matchers::Complain.new(message, **options)
+    def complain(message = nil, **)
+      BuildYourOwn::RubyCoreLirary::RSpec::Matchers::Complain.new(message, **)
     end
   end
 end
