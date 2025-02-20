@@ -496,8 +496,7 @@ end
 ```
 
 
-## Emitting warnings
-
+### Emitting warnings
 
 Some methods emit warnings, e.g. passed block that isn't used.
 
@@ -554,7 +553,7 @@ end
 foo
 ```
 
-Output the following:
+Output is the following:
 
 ```
 ruby warning.rb
@@ -562,7 +561,7 @@ warning.rb:5: warning: given block not used
 ```
 
 
-## If you still want to look at how the Enumerable module is implemented
+## If you want to look at production ready implementations
 
 The reference Enumerable implementation in Ruby is located
 [here](https://github.com/ruby/ruby/blob/v3_4_1/enum.c).
@@ -578,7 +577,7 @@ readable implementations:
 
 ## Implementation notes
 
-## Sorting
+### Sorting
 
 Methods like `#sort` and `#sort_by` can be implemented simply by
 relying on `Array#sort` and `Array#sort_by`. And it is a good example of
