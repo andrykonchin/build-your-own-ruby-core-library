@@ -1,7 +1,8 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
+require_relative 'fixtures/classes'
 
-describe "Range" do
+RSpec.describe "Range" do
   it "includes Enumerable" do
-    Range.include?(Enumerable).should == true
+    expect(Range.include?(Enumerable)).to eq(true)
   end
 end

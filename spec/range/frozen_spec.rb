@@ -1,25 +1,26 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
+require_relative 'fixtures/classes'
 
 # There is no Range#frozen? method but this feels like the best place for these specs
-describe "Range#frozen?" do
+RSpec.describe "Range#frozen?" do
   it "is true for literal ranges" do
-    (1..2).should.frozen?
-    (1..).should.frozen?
-    (..1).should.frozen?
+    expect((1..2).frozen?).to be true
+    expect((1..).frozen?).to be true
+    expect((..1).frozen?).to be true
   end
 
   it "is true for Range.new" do
-    Range.new(1, 2).should.frozen?
-    Range.new(1, nil).should.frozen?
-    Range.new(nil, 1).should.frozen?
+    expect(Range.new(1, 2).frozen?).to be true
+    expect(Range.new(1, nil).frozen?).to be true
+    expect(Range.new(nil, 1).frozen?).to be true
   end
 
   it "is false for instances of a subclass of Range" do
     sub_range = Class.new(Range).new(1, 2)
-    sub_range.should_not.frozen?
+    expect(sub_range.frozen?).to be false
   end
 
   it "is false for Range.allocate" do
-    Range.allocate.should_not.frozen?
+    expect(Range.allocate.frozen?).to be false
   end
 end
