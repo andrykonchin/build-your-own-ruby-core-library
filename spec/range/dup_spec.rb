@@ -1,23 +1,24 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
+require_relative 'fixtures/classes'
 
-describe "Range#dup" do
+RSpec.describe "Range#dup" do
   it "duplicates the range" do
     original = (1..3)
     copy = original.dup
-    copy.begin.should == 1
-    copy.end.should == 3
-    copy.should_not.exclude_end?
-    copy.should_not.equal?(original)
+    expect(copy.begin).to eq(1)
+    expect(copy.end).to eq(3)
+    expect(copy.exclude_end?).to be false
+    expect(copy).not_to equal(original)
 
     copy = ("a"..."z").dup
-    copy.begin.should == "a"
-    copy.end.should == "z"
-    copy.should.exclude_end?
+    expect(copy.begin).to eq("a")
+    expect(copy.end).to eq("z")
+    expect(copy.exclude_end?).to be true
   end
 
   it "creates an unfrozen range" do
-    (1..2).dup.should_not.frozen?
-    (1..).dup.should_not.frozen?
-    Range.new(1, 2).dup.should_not.frozen?
+    expect((1..2).dup.frozen?).to be false
+    expect((1..).dup.frozen?).to be false
+    expect(Range.new(1, 2).dup.frozen?).to be false
   end
 end

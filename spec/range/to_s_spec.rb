@@ -1,23 +1,24 @@
-require_relative '../../spec_helper'
+require 'spec_helper'
+require_relative 'fixtures/classes'
 
-describe "Range#to_s" do
+RSpec.describe "Range#to_s" do
   it "provides a printable form of self" do
-    (0..21).to_s.should == "0..21"
-    (-8..0).to_s.should ==  "-8..0"
-    (-411..959).to_s.should == "-411..959"
-    ('A'..'Z').to_s.should == 'A..Z'
-    ('A'...'Z').to_s.should == 'A...Z'
-    (0xfff..0xfffff).to_s.should == "4095..1048575"
-    (0.5..2.4).to_s.should == "0.5..2.4"
+    expect((0..21).to_s).to eq("0..21")
+    expect((-8..0).to_s).to eq("-8..0")
+    expect((-411..959).to_s).to eq("-411..959")
+    expect(('A'..'Z').to_s).to eq('A..Z')
+    expect(('A'...'Z').to_s).to eq('A...Z')
+    expect((0xfff..0xfffff).to_s).to eq("4095..1048575")
+    expect((0.5..2.4).to_s).to eq("0.5..2.4")
   end
 
   it "can show endless ranges" do
-    eval("(1..)").to_s.should == "1.."
-    eval("(1.0...)").to_s.should == "1.0..."
+    expect(eval("(1..)").to_s).to eq("1..")
+    expect(eval("(1.0...)").to_s).to eq("1.0...")
   end
 
   it "can show beginless ranges" do
-    (..1).to_s.should == "..1"
-    (...1.0).to_s.should == "...1.0"
+    expect((..1).to_s).to eq("..1")
+    expect((...1.0).to_s).to eq("...1.0")
   end
 end
