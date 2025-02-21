@@ -1,58 +1,88 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#eql?" do
-  #it_behaves_like :range_eql, :eql?
+RSpec.describe 'Range#eql?' do
+  it 'returns true if and only if other is a Range, self.begin and self.end are equal with #eql? and exclude_end is the same' do
+    a = Range.new(RangeSpecs::WithEql.new(0), RangeSpecs::WithEql.new(6), true)
+    b = Range.new(RangeSpecs::WithEql.new(0), RangeSpecs::WithEql.new(6), true)
 
-  it "returns true if other has same begin, end, and exclude_end? values" do
-    expect((0..2).eql?(0..2)).to eq(true)
-    expect(('G'..'M').eql?('G'..'M')).to eq(true)
-    expect((0.5..2.4).eql?(0.5..2.4)).to eq(true)
-    expect((5..10).eql?(Range.new(5,10))).to eq(true)
-    expect(('D'..'V').eql?(Range.new('D','V'))).to eq(true)
-    expect((0.5..2.4).eql?(Range.new(0.5, 2.4))).to eq(true)
-    expect((0xffff..0xfffff).eql?(0xffff..0xfffff)).to eq(true)
-    expect((0xffff..0xfffff).eql?(Range.new(0xffff,0xfffff))).to eq(true)
-
-    a = RangeSpecs::Xs.new(3)..RangeSpecs::Xs.new(5)
-    b = Range.new(RangeSpecs::Xs.new(3), RangeSpecs::Xs.new(5))
-    expect(a.eql?(b)).to eq(true)
+    expect(a).to eql(b)
   end
 
-  it "returns false if one of the attributes differs" do
-    expect(('Q'..'X').eql?('A'..'C')).to eq(false)
-    expect(('Q'...'X').eql?('Q'..'W')).to eq(false)
-    expect(('Q'..'X').eql?('Q'...'X')).to eq(false)
-    expect((0.5..2.4).eql?(0.5...2.4)).to eq(false)
-    expect((1482..1911).eql?(1482...1911)).to eq(false)
-    expect((0xffff..0xfffff).eql?(0xffff...0xfffff)).to eq(false)
-
-    a = RangeSpecs::Xs.new(3)..RangeSpecs::Xs.new(5)
-    b = Range.new(RangeSpecs::Ys.new(3), RangeSpecs::Ys.new(5))
-    expect(a.eql?(b)).to eq(false)
+  it "returns false if other isn't a Range" do
+    expect(Range.new(0, 6)).not_to eql(Object.new)
   end
 
-  it "returns false if other is not a Range" do
-    expect((1..10).eql?(1)).to eq(false)
-    expect((1..10).eql?('a')).to eq(false)
-    expect((1..10).eql?(double('x'))).to eq(false)
+  it "returns false if self.begin values aren't equal with #eql?" do
+    a = Range.new(RangeSpecs::WithEql.new(0), RangeSpecs::WithEql.new(6), true)
+    b = Range.new(RangeSpecs::WithEql.new(1), RangeSpecs::WithEql.new(6), true)
+
+    expect(a).not_to eql(b)
   end
 
-  it "returns true for subclasses of Range" do
-    expect(Range.new(1, 2).eql?(RangeSpecs::MyRange.new(1, 2))).to eq(true)
+  it "returns false if self.end values aren't equal with #eql?" do
+    a = Range.new(RangeSpecs::WithEql.new(0), RangeSpecs::WithEql.new(6), true)
+    b = Range.new(RangeSpecs::WithEql.new(0), RangeSpecs::WithEql.new(7), true)
 
-    a = Range.new(RangeSpecs::Xs.new(3), RangeSpecs::Xs.new(5))
-    b = RangeSpecs::MyRange.new(RangeSpecs::Xs.new(3), RangeSpecs::Xs.new(5))
-    expect(a.eql?(b)).to eq(true)
+    expect(a).not_to eql(b)
   end
 
-  it "works for endless Ranges" do
-    expect(eval("(1..)").eql?(eval("(1..)"))).to eq(true)
-    expect(eval("(0.5...)").eql?(eval("(0.5...)"))).to eq(true)
-    expect(eval("(1..)").eql?(eval("(1...)"))).to eq(false)
+  it "returns false if exclude_end? values aren't the same" do
+    a = Range.new(RangeSpecs::WithEql.new(0), RangeSpecs::WithEql.new(6), true)
+    b = Range.new(RangeSpecs::WithEql.new(0), RangeSpecs::WithEql.new(6), false)
+
+    expect(a).not_to eql(b)
   end
 
-  it "returns false if the endpoints are not eql?" do
-    expect(0..1).not_to eql(0..1.0)
+  it 'returns true if other is an instance of a Range subclass' do
+    subclass = Class.new(Range)
+    a = Range.new(RangeSpecs::WithEql.new(0), RangeSpecs::WithEql.new(6), true)
+    b = subclass.new(RangeSpecs::WithEql.new(0), RangeSpecs::WithEql.new(6), true)
+
+    expect(a).to eql(b)
+  end
+
+  it 'returns true for endless Ranges with equal self.begin' do
+    a = Range.new(RangeSpecs::WithEql.new(0), nil, true)
+    b = Range.new(RangeSpecs::WithEql.new(0), nil, true)
+    expect(a).to eql(b)
+
+    a = Range.new(RangeSpecs::WithEql.new(0), nil, false)
+    b = Range.new(RangeSpecs::WithEql.new(0), nil, false)
+    expect(a).to eql(b)
+  end
+
+  it 'returns false for endless Ranges with not equal self.begin' do
+    a = Range.new(RangeSpecs::WithEql.new(0), nil, true)
+    b = Range.new(RangeSpecs::WithEql.new(1), nil, true)
+    expect(a).not_to eql(b)
+  end
+
+  it 'returns false for endless Ranges with not equal exclude_end?' do
+    a = Range.new(RangeSpecs::WithEql.new(0), nil, true)
+    b = Range.new(RangeSpecs::WithEql.new(0), nil, false)
+    expect(a).not_to eql(b)
+  end
+
+  it 'returns true for beginingless Ranges with equal self.end' do
+    a = Range.new(nil, RangeSpecs::WithEql.new(0), true)
+    b = Range.new(nil, RangeSpecs::WithEql.new(0), true)
+    expect(a).to eql(b)
+
+    a = Range.new(nil, RangeSpecs::WithEql.new(0), false)
+    b = Range.new(nil, RangeSpecs::WithEql.new(0), false)
+    expect(a).to eql(b)
+  end
+
+  it 'returns false for beginingless Ranges with not equal self.end' do
+    a = Range.new(nil, RangeSpecs::WithEql.new(0), true)
+    b = Range.new(nil, RangeSpecs::WithEql.new(1), true)
+    expect(a).not_to eql(b)
+  end
+
+  it 'returns false for beginingless Ranges with not equal exclude_end?' do
+    a = Range.new(nil, RangeSpecs::WithEql.new(0), true)
+    b = Range.new(nil, RangeSpecs::WithEql.new(0), false)
+    expect(a).not_to eql(b)
   end
 end

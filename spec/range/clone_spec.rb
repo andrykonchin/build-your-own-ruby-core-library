@@ -1,27 +1,44 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#clone" do
-  it "duplicates the range" do
-    original = (1..3)
-    copy = original.clone
+RSpec.describe 'Range#clone' do
+  it 'duplicates a range' do
+    range = Range.new(1, 3)
+    copy = range.clone
+
     expect(copy.begin).to eq(1)
     expect(copy.end).to eq(3)
-    expect(copy.exclude_end?).to be false
-    expect(copy).not_to equal(original)
-
-    original = ("a"..."z")
-    copy = original.clone
-    expect(copy.begin).to eq("a")
-    expect(copy.end).to eq("z")
-    expect(copy.exclude_end?).to be true
-    expect(copy).not_to equal(original)
   end
 
-  it "maintains the frozen state" do
-    expect((1..2).clone.frozen?).to eq((1..2).frozen?)
-    expect((1..).clone.frozen?).to eq((1..).frozen?)
-    expect(Range.new(1, 2).clone.frozen?).to eq(Range.new(1, 2).frozen?)
-    expect(Class.new(Range).new(1, 2).clone.frozen?).to eq(Class.new(Range).new(1, 2).frozen?)
+  it 'returns a new object' do
+    range = Range.new(1, 3)
+    copy = range.clone
+    expect(copy).not_to equal(range)
+  end
+
+  it 'reuses boundary objects' do
+    a = RangeSpecs::Element.new(1)
+    b = RangeSpecs::Element.new(3)
+    range = Range.new(a, b)
+    copy = range.clone
+
+    expect(copy.begin).to equal(a)
+    expect(copy.end).to equal(b)
+  end
+
+  it 'preserves self.exclude_end?' do
+    range = Range.new(1, 3, true)
+    copy = range.clone
+    expect(copy.exclude_end?).to be true
+
+    range = Range.new(1, 3, false)
+    copy = range.clone
+    expect(copy.exclude_end?).to be false
+  end
+
+  it 'returns a frozen object' do
+    range = Range.new(1, 3)
+    copy = range.clone
+    expect(copy.frozen?).not_to be false
   end
 end
