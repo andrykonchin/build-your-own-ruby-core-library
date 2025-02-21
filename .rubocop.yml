@@ -36,6 +36,9 @@ Style/FrozenStringLiteralComment:
 Style/MapIntoArray:
   Enabled: false
 
+Style/OperatorMethodCall: # it's just broken for `range.%(2)`
+  Enabled: false
+
 Style/PerlBackrefs:
   Enabled: false
 

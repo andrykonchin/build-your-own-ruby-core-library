@@ -1,89 +1,164 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#min" do
-  it "returns the minimum value in the range when called with no arguments" do
-    expect((1..10).min).to eq(1)
-    expect(('f'..'l').min).to eq('f')
+RSpec.describe 'Range#min' do
+  it 'returns self.begin' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    expect(range.min).to eq(RangeSpecs::WithSucc.new(1))
   end
 
-  it "returns the minimum value in the Float range when called with no arguments" do
-    expect((303.20..908.1111).min).to eq(303.20)
+  it 'returns nil for empty range' do
+    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+    expect(range.min).to be_nil
   end
 
-  it "returns nil when the start point is greater than the endpoint" do
-    expect((100..10).min).to be_nil
-    expect(('z'..'l').min).to be_nil
+  it 'returns nil for backward range' do
+    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+    expect(range.min).to be_nil
   end
 
-  it "returns nil when the endpoint equals the start point and the range is exclusive" do
-    expect((7...7).min).to be_nil
+  it 'raises RangeError if beginingless range' do
+    range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+
+    expect {
+      range.min
+    }.to raise_error(RangeError, 'cannot get the minimum of beginless range')
   end
 
-  it "returns the start point when the endpoint equals the start point and the range is inclusive" do
-    expect((7..7).min).to equal(7)
-  end
+  context 'given an argument n' do
+    it 'returns an array containing n leftmost elements' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
-  it "returns nil when the start point is greater than the endpoint in a Float range" do
-    expect((3003.20..908.1111).min).to be_nil
-  end
+      expect(range.min(2)).to contain_exactly(
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2)
+      )
+    end
 
-  it "returns start point when the range is Time..Time(included end point)" do
-    time_start = Time.now
-    time_end = Time.now + 1.0
-    expect((time_start..time_end).min).to equal(time_start)
-  end
+    it 'allows an argument n be greater than elements number' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
-  it "returns start point when the range is Time...Time(excluded end point)" do
-    time_start = Time.now
-    time_end = Time.now + 1.0
-    expect((time_start...time_end).min).to equal(time_start)
-  end
+      expect(range.min(10)).to contain_exactly(
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+      )
+    end
 
-  it "returns the start point for endless ranges" do
-    expect(eval("(1..)").min).to eq(1)
-    expect(eval("(1.0...)").min).to eq(1.0)
-  end
+    it 'ignores the right boundary if excluded end' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
 
-  it "raises RangeError when called on an beginless range" do
-    expect { (..1).min }.to raise_error(RangeError)
-  end
-end
+      expect(range.min(4)).to contain_exactly(
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3)
+      )
+    end
 
-RSpec.describe "Range#min given a block" do
-  it "passes each pair of values in the range to the block" do
-    acc = []
-    (1..10).min {|a,b| acc << [a,b]; a }
-    acc.flatten!
-    (1..10).each do |value|
-      expect(acc.include?(value)).to be true
+    it 'raises an ArgumentError when n is negative' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+
+      # The error message "negative array size (or size too big)" is
+      # Array-specific and doesn't match similar error messages in Enumerable.
+      # CRuby creates a temporary Array so it fails first
+      expect {
+        range.min(-1)
+      }.to raise_error(ArgumentError, /negative array size \(or size too big\)|negative size \(-1\)/)
+    end
+
+    it 'raises a RangeError when passed a Bignum' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+
+      expect {
+        range.min(bignum_value)
+      }.to raise_error(RangeError, "bignum too big to convert into 'long'")
+    end
+
+    it 'returns [] for empty range' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+      expect(range.min(2)).to eq([])
+    end
+
+    it 'returns [] for backward range' do
+      range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+      expect(range.min(2)).to eq([])
+    end
+
+    it 'raises RangeError if beginingless range' do
+      range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+
+      expect {
+        range.min(2)
+      }.to raise_error(RangeError, 'cannot get the minimum of beginless range')
+    end
+
+    describe 'argument conversion to Integer' do
+      it 'converts the passed argument to an Integer using #to_int' do
+        range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+        n = double('n', to_int: 2)
+
+        expect(range.min(n)).to contain_exactly(
+          RangeSpecs::WithSucc.new(1),
+          RangeSpecs::WithSucc.new(2)
+        )
+      end
+
+      it 'raises a TypeError if the passed argument does not respond to #to_int' do
+        range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+        expect { range.min('a') }.to raise_error(TypeError, 'no implicit conversion of String into Integer')
+      end
+
+      it 'raises a TypeError if the passed argument responds to #to_int but it returns non-Integer value' do
+        range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+        n = double('n', to_int: 'a')
+
+        expect {
+          range.min(n)
+        }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")
+      end
     end
   end
 
-  it "passes each pair of elements to the block where the first argument is the current element, and the last is the first element" do
-    acc = []
-    (1..5).min {|a,b| acc << [a,b]; a }
-    expect(acc).to eq([[2, 1], [3, 1], [4, 1], [5, 1]])
-  end
+  context 'given a block' do
+    it 'compares elements using a block' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+      expect(range.min { |a, b| a <=> b }).to eq(RangeSpecs::WithSucc.new(1))
+    end
 
-  it "calls #> and #< on the return value of the block" do
-    obj = double('obj')
-    expect(obj).to receive(:>).exactly(2).times
-    expect(obj).to receive(:<).exactly(2).times
-    (1..3).min {|a,b| obj }
-  end
+    it 'returns an array containing the minimum n elements' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
-  it "returns the element the block determines to be the minimum" do
-    expect((1..3).min {|a,b| -3 }).to eq(3)
-  end
+      expect(range.min(2) { |a, b| a <=> b }).to contain_exactly(
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2)
+      )
+    end
 
-  it "returns nil when the start point is greater than the endpoint" do
-    expect((100..10).min {|x,y| x <=> y}).to be_nil
-    expect(('z'..'l').min {|x,y| x <=> y}).to be_nil
-    expect((7...7).min {|x,y| x <=> y}).to be_nil
-  end
+    it 'returns nil for empty range' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+      expect(range.min { |a, b| a <=> b }).to be_nil
+    end
 
-  it "raises RangeError when called with custom comparison method on an endless range" do
-    expect { eval("(1..)").min {|a, b| a} }.to raise_error(RangeError)
+    it 'returns nil for backward range' do
+      range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+      expect(range.min { |a, b| a <=> b }).to be_nil
+    end
+
+    it 'raises RangeError if beginingless range' do
+      range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+
+      expect {
+        range.min { |a, b| a <=> b }
+      }.to raise_error(RangeError, 'cannot get the minimum of beginless range')
+    end
+
+    it 'raises RangeError if endless range' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), nil)
+
+      expect {
+        range.min { |a, b| a <=> b }
+      }.to raise_error(RangeError, 'cannot get the minimum of endless range with custom comparison method')
+    end
   end
 end

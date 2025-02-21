@@ -1,107 +1,232 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#each" do
-  it "passes each element to the given block by using #succ" do
-    a = []
-    (-5..5).each { |i| a << i }
-    expect(a).to eq([-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5])
-
-    a = []
-    ('A'..'D').each { |i| a << i }
-    expect(a).to eq(['A','B','C','D'])
-
-    a = []
-    ('A'...'D').each { |i| a << i }
-    expect(a).to eq(['A','B','C'])
-
-    a = []
-    (0xfffd...0xffff).each { |i| a << i }
-    expect(a).to eq([0xfffd, 0xfffe])
-
-    y = double('y')
-    x = double('x')
-    expect(x).to receive(:<=>).with(y).at_least(:once).and_return(-1)
-    expect(x).to receive(:<=>).with(x).at_least(:once).and_return(0)
-    expect(x).to receive(:succ).at_least(:once).and_return(y)
-    expect(y).to receive(:<=>).with(x).at_least(:once).and_return(1)
-    expect(y).to receive(:<=>).with(y).at_least(:once).and_return(0)
-
-    a = []
-    (x..y).each { |i| a << i }
-    expect(a).to eq([x, y])
+RSpec.describe 'Range#each' do
+  before do
+    ScratchPad.record []
   end
 
-  it "works for non-ASCII ranges" do
-    a = []
-    ('Σ'..'Ω').each { |i| a << i }
-    expect(a).to eq(["Σ", "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω"])
+  it 'passes each element of self to the block' do # rubocop:disable RSpec/RepeatedExample
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    range.each { |e| ScratchPad << e }
+
+    expect(ScratchPad.recorded).to eq(
+      [
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+      ]
+    )
   end
 
-  it "works with endless ranges" do
-    a = []
-    (-2..).each { |x| break if x > 2; a << x }
-    expect(a).to eq([-2, -1, 0, 1, 2])
+  it "doesn't yield self.end if end is excluded" do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+    range.each { |e| ScratchPad << e }
 
-    a = []
-    (-2...).each { |x| break if x > 2; a << x }
-    expect(a).to eq([-2, -1, 0, 1, 2])
+    expect(ScratchPad.recorded).to eq(
+      [
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3)
+      ]
+    )
   end
 
-  it "works with String endless ranges" do
-    a = []
-    ('A'..).each { |x| break if x > "D"; a << x }
-    expect(a).to eq(["A", "B", "C", "D"])
+  it 'returns an Enumerator if no block given' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    e = range.each
 
-    a = []
-    ('A'...).each { |x| break if x > "D"; a << x }
-    expect(a).to eq(["A", "B", "C", "D"])
+    expect(e).to be_an_instance_of(Enumerator)
+    expect(e.to_a).to eq(
+      [
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+      ]
+    )
   end
 
-  it "raises a TypeError beginless ranges" do
-    expect { (..2).each { |x| x } }.to raise_error(TypeError)
+  it 'returns self if block given' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    expect(range.each {}).to equal(range)
   end
 
-  it "raises a TypeError if the first element does not respond to #succ" do
-    expect { (0.5..2.4).each { |i| i } }.to raise_error(TypeError)
+  it 'iterates calling #succ on current element to get the next one' do # rubocop:disable RSpec/RepeatedExample
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    range.each { |e| ScratchPad << e }
 
-    b = double('x')
-    expect(a = double('1')).to receive(:<=>).with(b).and_return(1)
-
-    expect { (a..b).each { |i| i } }.to raise_error(TypeError)
+    expect(ScratchPad.recorded).to eq(
+      [
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+      ]
+    )
   end
 
-  it "returns self" do
-    range = 1..10
-    expect(range.each{}).to equal(range)
+  it "raises TypeError if a range is not iterable (that's some element doesn't respond to #succ)" do
+    range = Range.new(RangeSpecs::WithoutSucc.new(1), RangeSpecs::WithoutSucc.new(4))
+    expect {
+      range.each {}
+    }.to raise_error(TypeError, "can't iterate from RangeSpecs::WithoutSucc")
+
+    range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+    expect {
+      range.each {}
+    }.to raise_error(TypeError, "can't iterate from NilClass")
   end
 
-  it "returns an enumerator when no block given" do
-    enum = (1..3).each
-    expect(enum).to be_an_instance_of(Enumerator)
-    expect(enum.to_a).to eq([1, 2, 3])
+  it 'works with endless ranges' do
+    range = Range.new(RangeSpecs::WithSucc.new(-2), nil)
+    range.each { |e| break if e.value > 2; ScratchPad << e }
+
+    expect(ScratchPad.recorded).to eq(
+      [
+        RangeSpecs::WithSucc.new(-2),
+        RangeSpecs::WithSucc.new(-1),
+        RangeSpecs::WithSucc.new(0),
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2)
+      ]
+    )
   end
 
-  it "supports Time objects that respond to #succ" do
-    t = Time.utc(1970)
-    def t.succ; self + 1 end
-    t_succ = t.succ
-    def t_succ.succ; self + 1; end
+  it 'yields nothing if backward range' do
+    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
 
-    expect((t..t_succ).to_a).to eq([Time.utc(1970), Time.utc(1970, nil, nil, nil, nil, 1)])
-    expect((t...t_succ).to_a).to eq([Time.utc(1970)])
+    range.each { |e| ScratchPad << e }
+    expect(ScratchPad.recorded).to eq([])
   end
 
-  it "passes each Symbol element by using #succ" do
-    expect((:aa..:ac).each.to_a).to eq([:aa, :ab, :ac])
-    expect((:aa...:ac).each.to_a).to eq([:aa, :ab])
+  it 'yields nothing if empty range' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(1), true)
+
+    range.each { |e| ScratchPad << e }
+    expect(ScratchPad.recorded).to eq([])
   end
 
-  describe "when no block is given" do
-    describe "returned Enumerator" do
-      it "size returns the enumerable size" do
-        object = (1..3)
-        expect(object.each.size).to eq(object.size)
+  context 'String ranges' do
+    it 'iterates until #succ returns a value that equals self.end' do
+      range = Range.new('a', 'ab')
+
+      range.each { |e| ScratchPad << e }
+      expect(ScratchPad.recorded).to eq(%w[a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab])
+    end
+
+    it 'returns self if block given' do
+      range = Range.new('a', 'c')
+      expect(range.each {}).to equal(range)
+    end
+
+    it "doesn't yield self.end if end is excluded" do
+      range = Range.new('a', 'c', true)
+      range.each { |e| ScratchPad << e }
+
+      expect(ScratchPad.recorded).to eq(%w[a b])
+    end
+
+    it 'works with endless ranges' do
+      range = Range.new('a', nil)
+      range.each { |e| break if e > 'c'; ScratchPad << e }
+
+      expect(ScratchPad.recorded).to eq(%w[a b c])
+    end
+
+    it 'yields nothing if backward range' do
+      range = Range.new('c', 'a')
+
+      range.each { |e| ScratchPad << e }
+      expect(ScratchPad.recorded).to eq([])
+    end
+
+    it 'yields nothing if empty range' do
+      range = Range.new('a', 'a', true)
+
+      range.each { |e| ScratchPad << e }
+      expect(ScratchPad.recorded).to eq([])
+    end
+  end
+
+  context 'Symbol ranges' do
+    it 'iterates until #succ returns a value that equals self.end' do
+      range = Range.new(:a, :ab)
+
+      range.each { |e| ScratchPad << e }
+      expect(ScratchPad.recorded).to eq(%i[a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab])
+    end
+
+    it "doesn't yield self.end if end is excluded" do
+      range = Range.new(:a, :c, true)
+      range.each { |e| ScratchPad << e }
+
+      expect(ScratchPad.recorded).to eq(%i[a b])
+    end
+
+    it 'works with endless ranges' do
+      range = Range.new(:a, nil)
+      range.each { |e| break if e > :c; ScratchPad << e }
+
+      expect(ScratchPad.recorded).to eq(%i[a b c])
+    end
+
+    it 'yields nothing if backward range' do
+      range = Range.new(:c, :a)
+
+      range.each { |e| ScratchPad << e }
+      expect(ScratchPad.recorded).to eq([])
+    end
+
+    it 'yields nothing if empty range' do
+      range = Range.new(:a, :a, true)
+
+      range.each { |e| ScratchPad << e }
+      expect(ScratchPad.recorded).to eq([])
+    end
+  end
+
+  describe 'finit range' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns the range size when Numeric range' do
+          range = Range.new(1, 4)
+          expect(range.each.size).to eq(range.size)
+
+          range = Range.new(4, 1)
+          expect(range.each.size).to eq(range.size)
+
+          range = Range.new(1, Float::INFINITY)
+          expect(range.each.size).to eq(range.size)
+        end
+
+        it "raises TypeError if a range is not iterable (that's some element doesn't respond to #succ)" do
+          range = Range.new(RangeSpecs::WithoutSucc.new(1), RangeSpecs::WithoutSucc.new(4))
+
+          expect {
+            range.each.size
+          }.to raise_error(TypeError, "can't iterate from RangeSpecs::WithoutSucc")
+        end
+
+        it 'size returns the range size when non-Numeric range' do
+          range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+          expect(range.each.size).to eq(range.size)
+        end
+      end
+    end
+  end
+
+  describe 'infinit range' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns range size' do
+          range = Range.new(1, nil)
+          expect(range.each.size).to eq(range.size)
+
+          range = Range.new(RangeSpecs::WithSucc.new(1), nil)
+          expect(range.each.size).to eq(range.size)
+        end
       end
     end
   end

@@ -1,24 +1,40 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#to_s" do
-  it "provides a printable form of self" do
-    expect((0..21).to_s).to eq("0..21")
-    expect((-8..0).to_s).to eq("-8..0")
-    expect((-411..959).to_s).to eq("-411..959")
-    expect(('A'..'Z').to_s).to eq('A..Z')
-    expect(('A'...'Z').to_s).to eq('A...Z')
-    expect((0xfff..0xfffff).to_s).to eq("4095..1048575")
-    expect((0.5..2.4).to_s).to eq("0.5..2.4")
+RSpec.describe 'Range#to_s' do
+  it 'returns a string representation of self' do
+    expect(Range.new(0, 1).to_s).to eq('0..1')
+    expect(Range.new('A', 'Z').to_s).to eq('A..Z')
   end
 
-  it "can show endless ranges" do
-    expect(eval("(1..)").to_s).to eq("1..")
-    expect(eval("(1.0...)").to_s).to eq("1.0...")
+  it 'calls #to_s for self.begin and self.end' do
+    a = double('begin', to_s: 'begin', '<=>': 1)
+    b = double('end', to_s: 'end', '<=>': 1)
+    range = Range.new(a, b)
+
+    expect(range.to_s).to eq('begin..end')
   end
 
-  it "can show beginless ranges" do
-    expect((..1).to_s).to eq("..1")
-    expect((...1.0).to_s).to eq("...1.0")
+  it 'uses ... if excluded end' do
+    range = Range.new(0, 1, true)
+    expect(range.to_s).to eq('0...1')
+  end
+
+  it 'uses "" for the left boundary if beginless range' do
+    expect(Range.new(nil, 1).to_s).to eq('..1')
+    expect(Range.new(nil, 1, true).to_s).to eq('...1')
+  end
+
+  it 'uses "" for the right boundary if endless range' do
+    expect(Range.new(1, nil).to_s).to eq('1..')
+    expect(Range.new(1, nil, true).to_s).to eq('1...')
+  end
+
+  it 'keeps only .. for (nil..nil) ranges' do
+    expect(Range.new(nil, nil).to_s).to eq('..')
+  end
+
+  it 'keeps only ... for (nil...nil) ranges' do
+    expect(Range.new(nil, nil, true).to_s).to eq('...')
   end
 end

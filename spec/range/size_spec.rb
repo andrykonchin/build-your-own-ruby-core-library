@@ -1,48 +1,56 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#size" do
-  it "returns the number of elements in the range" do
-    expect((1..16).size).to eq(16)
-    expect((1...16).size).to eq(15)
+RSpec.describe 'Range#size' do
+  context 'Integer range' do
+    it 'returns the number of elements if forward range' do
+      expect(Range.new(1, 16).size).to eq(16)
+      expect(Range.new(1, 16, true).size).to eq(15)
+    end
+
+    it 'returns 0 if backward range' do
+      range = Range.new(16, 0)
+      expect(range.size).to eq(0)
+    end
+
+    it 'returns 0 if empty range' do
+      range = Range.new(0, 0, true)
+      expect(range.size).to eq(0)
+    end
+
+    it 'returns 0 if infinite backward range' do
+      range = Range.new(16, -Float::INFINITY)
+      expect(range.size).to eq(0)
+    end
+
+    it 'returns Float::INFINITY if infinite forward range' do
+      range = Range.new(0, Float::INFINITY)
+      expect(range.size).to eq(Float::INFINITY)
+    end
+
+    it 'returns Float::INFINITY if endless range' do
+      range = Range.new(1, nil)
+      expect(range.size).to eq(Float::INFINITY)
+    end
   end
 
-  it "returns 0 if last is less than first" do
-    expect((16..0).size).to eq(0)
+  it 'returns nil if non-Integer range' do
+    expect(Range.new(:a, :z).size).to be_nil
+    expect(Range.new('a', 'z').size).to be_nil
   end
 
-  it 'returns Float::INFINITY for increasing, infinite ranges' do
-    expect((0..Float::INFINITY).size).to eq(Float::INFINITY)
+  it 'returns nil if non-Integer endless range' do
+    range = Range.new('z', nil)
+    expect(range.size).to be_nil
   end
 
-  it 'returns Float::INFINITY for endless ranges if the start is numeric' do
-    expect(eval("(1..)").size).to eq(Float::INFINITY)
-  end
+  it "raises TypeError if a range is not iterable (that's some element doesn't respond to #succ)" do
+    expect {
+      Range.new(1.0, 16.0).size
+    }.to raise_error(TypeError, "can't iterate from Float")
 
-  it 'returns nil for endless ranges if the start is not numeric' do
-    expect(eval("('z'..)").size).to eq(nil)
-  end
-
-  it 'raises TypeError if a range is not iterable' do
-    expect { (1.0..16.0).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (1.0...16.0).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (1.0..15.9).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (1.1..16.0).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (1.1..15.9).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (16.0..0.0).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (Float::INFINITY..0).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (-Float::INFINITY..0).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (-Float::INFINITY..Float::INFINITY).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (..1).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (...0.5).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (..nil).size }.to raise_error(TypeError, /can't iterate from/)
-    expect { (...'o').size }.to raise_error(TypeError, /can't iterate from/)
-    expect { eval("(0.5...)").size }.to raise_error(TypeError, /can't iterate from/)
-    expect { eval("([]...)").size }.to raise_error(TypeError, /can't iterate from/)
-  end
-
-  it "returns nil if first and last are not Numeric" do
-    expect((:a..:z).size).to be_nil
-    expect(('a'..'z').size).to be_nil
+    expect {
+      Range.new(nil, 1).size
+    }.to raise_error(TypeError, "can't iterate from NilClass")
   end
 end

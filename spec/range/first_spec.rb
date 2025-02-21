@@ -1,60 +1,145 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#first" do
-  it "returns the first element of self" do
-    expect((-1..1).first).to eq(-1)
-    expect((0..1).first).to eq(0)
-    expect((0xffff...0xfffff).first).to eq(65535)
-    expect(('Q'..'T').first).to eq('Q')
-    expect(('Q'...'T').first).to eq('Q')
-    expect((0.5..2.4).first).to eq(0.5)
+RSpec.describe 'Range#first' do
+  it 'returns self.begin' do
+    a = RangeSpecs::Element.new(0)
+    b = RangeSpecs::Element.new(1)
+    range = Range.new(a, b)
+    expect(range.first).to equal(a)
   end
 
-  it "returns the specified number of elements from the beginning" do
-    expect((0..2).first(2)).to eq([0, 1])
+  it 'returns self.begin even when self is empty' do
+    a = RangeSpecs::Element.new(0)
+    expect(Range.new(a, a, true).first).to equal(a)
   end
 
-  it "returns an empty array for an empty Range" do
-    expect((0...0).first(2)).to eq([])
+  it 'returns self.begin even when self is backward' do
+    a = RangeSpecs::Element.new(0)
+    b = RangeSpecs::Element.new(1)
+
+    expect(Range.new(b, a).first).to equal(b)
   end
 
-  it "returns an empty array when passed zero" do
-    expect((0..2).first(0)).to eq([])
+  it 'returns self.begin when a range is not iterable' do
+    a = RangeSpecs::WithoutSucc.new(0)
+    b = RangeSpecs::WithoutSucc.new(1)
+    range = Range.new(a, b)
+
+    expect(range.first).to eq(a)
   end
 
-  it "returns all elements in the range when count exceeds the number of elements" do
-    expect((0..2).first(4)).to eq([0, 1, 2])
+  it 'raises RangeError when there is no first element' do
+    range = Range.new(nil, RangeSpecs::Element.new(0))
+
+    expect {
+      range.first
+    }.to raise_error(RangeError, 'cannot get the first element of beginless range')
   end
 
-  it "raises an ArgumentError when count is negative" do
-    expect { (0..2).first(-1) }.to raise_error(ArgumentError)
-  end
+  describe 'given an argument' do
+    it 'returns the first n elements in an array' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
-  it "calls #to_int to convert the argument" do
-    obj = mock_int(2)
-    expect((3..7).first(obj)).to eq([3, 4])
-  end
+      expect(range.first(2)).to eq(
+        [
+          RangeSpecs::WithSucc.new(1),
+          RangeSpecs::WithSucc.new(2)
+        ]
+      )
+    end
 
-  it "raises a TypeError if #to_int does not return an Integer" do
-    obj = double("to_int")
-    expect(obj).to receive(:to_int).and_return("1")
-    expect { (2..3).first(obj) }.to raise_error(TypeError)
-  end
+    it "doesn't yield self.end when end is excluded" do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+      expect(range.first(4)).to eq(
+        [
+          RangeSpecs::WithSucc.new(1),
+          RangeSpecs::WithSucc.new(2),
+          RangeSpecs::WithSucc.new(3)
+        ]
+      )
+    end
 
-  it "truncates the value when passed a Float" do
-    expect((2..9).first(2.8)).to eq([2, 3])
-  end
+    it 'returns an empty array when a range is empty' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+      expect(range.first(2)).to eq([])
+    end
 
-  it "raises a TypeError when passed nil" do
-    expect { (2..3).first(nil) }.to raise_error(TypeError)
-  end
+    it 'returns an empty array when a range is backward' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(0))
+      expect(range.first(2)).to eq([])
+    end
 
-  it "raises a TypeError when passed a String" do
-    expect { (2..3).first("1") }.to raise_error(TypeError)
-  end
+    it 'returns an empty array when n is zero' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+      expect(range.first(0)).to eq([])
+    end
 
-  it "raises a RangeError when called on an beginless range" do
-    expect { (..1).first }.to raise_error(RangeError)
+    it 'raises RangeError when there is no first element' do
+      range = Range.new(nil, RangeSpecs::WithSucc.new(1))
+
+      expect {
+        range.first(2)
+      }.to raise_error(RangeError, 'cannot get the first element of beginless range')
+    end
+
+    it 'raises an ArgumentError when an argument is negative' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+
+      # The error message "negative array size (or size too big)" is
+      # Array-specific and doesn't match similar error messages in Enumerable.
+      # CRuby creates a temporary Array so it fails first
+      expect {
+        range.first(-1)
+      }.to raise_error(ArgumentError, /negative array size \(or size too big\)|attempt to take negative size/)
+    end
+
+    it 'raises a RangeError when passed a Bignum' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+
+      expect {
+        range.first(bignum_value)
+      }.to raise_error(RangeError, "bignum too big to convert into 'long'")
+    end
+
+    it 'returns all elements in the range when n exceeds the number of elements' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+      expect(range.first(100)).to eq(
+        [
+          RangeSpecs::WithSucc.new(0),
+          RangeSpecs::WithSucc.new(1)
+        ]
+      )
+    end
+
+    describe 'argument conversion to Integer' do
+      it 'converts the passed argument to an Integer using #to_int' do
+        range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+        n = double('n', to_int: 2)
+
+        expect(range.first(n)).to eq(
+          [
+            RangeSpecs::WithSucc.new(0),
+            RangeSpecs::WithSucc.new(1)
+          ]
+        )
+      end
+
+      it 'raises a TypeError if the passed argument does not respond to #to_int' do
+        range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+
+        expect { range.first(nil) }.to raise_error(TypeError, 'no implicit conversion from nil to integer')
+        expect { range.first('a') }.to raise_error(TypeError, 'no implicit conversion of String into Integer')
+      end
+
+      it 'raises a TypeError if the passed argument responds to #to_int but it returns non-Integer value' do
+        range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+        n = double('n', to_int: 'a')
+
+        expect {
+          range.first(n)
+        }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")
+      end
+    end
   end
 end

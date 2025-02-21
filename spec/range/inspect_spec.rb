@@ -1,30 +1,40 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#inspect" do
-  it "provides a printable form, using #inspect to convert the start and end objects" do
-    expect(('A'..'Z').inspect).to eq('"A".."Z"')
-    expect(('A'...'Z').inspect).to eq('"A"..."Z"')
-
-    expect((0..21).inspect).to eq("0..21")
-    expect((-8..0).inspect).to eq("-8..0")
-    expect((-411..959).inspect).to eq("-411..959")
-    expect((0xfff..0xfffff).inspect).to eq("4095..1048575")
-    expect((0.5..2.4).inspect).to eq("0.5..2.4")
+RSpec.describe 'Range#inspect' do
+  it 'returns a string representation of self' do
+    expect(Range.new(0, 1).inspect).to eq('0..1')
+    expect(Range.new('A', 'Z').inspect).to eq('"A".."Z"')
   end
 
-  it "works for endless ranges" do
-    expect(eval("(1..)").inspect).to eq("1..")
-    expect(eval("(0.1...)").inspect).to eq("0.1...")
+  it 'calls #inspect for self.begin and self.end' do
+    a = double('begin', inspect: 'begin', '<=>': 1)
+    b = double('end', inspect: 'end', '<=>': 1)
+    range = Range.new(a, b)
+
+    expect(range.inspect).to eq('begin..end')
   end
 
-  it "works for beginless ranges" do
-    expect((..1).inspect).to eq("..1")
-    expect((...0.1).inspect).to eq("...0.1")
+  it 'uses ... when a range excludes end' do
+    range = Range.new(0, 1, true)
+    expect(range.inspect).to eq('0...1')
   end
 
-  it "works for nil ... nil ranges" do
-    expect((..nil).inspect).to eq("nil..nil")
-    expect(eval("(nil...)").inspect).to eq("nil...nil")
+  it 'uses "" for the left boundary if beginless range' do
+    expect(Range.new(nil, 1).inspect).to eq('..1')
+    expect(Range.new(nil, 1, true).inspect).to eq('...1')
+  end
+
+  it 'uses "" for the right boundary if endless range' do
+    expect(Range.new(1, nil).inspect).to eq('1..')
+    expect(Range.new(1, nil, true).inspect).to eq('1...')
+  end
+
+  it 'uses nil for both boundaries for (nil..nil) ranges' do
+    expect(Range.new(nil, nil).inspect).to eq('nil..nil')
+  end
+
+  it 'uses nil for both boundaries ... for (nil...nil) ranges' do
+    expect(Range.new(nil, nil, true).inspect).to eq('nil...nil')
   end
 end

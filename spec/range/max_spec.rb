@@ -1,102 +1,253 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#max" do
-  it "returns the maximum value in the range when called with no arguments" do
-    expect((1..10).max).to eq(10)
-    expect((1...10).max).to eq(9)
-    expect((0...2**64).max).to eq(18446744073709551615)
-    expect(('f'..'l').max).to eq('l')
-    expect(('a'...'f').max).to eq('e')
+RSpec.describe 'Range#max' do
+  it 'returns self.end' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    expect(range.max).to eq(RangeSpecs::WithSucc.new(4))
   end
 
-  it "returns the maximum value in the Float range when called with no arguments" do
-    expect((303.20..908.1111).max).to eq(908.1111)
+  it 'returns nil for empty range' do
+    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+    expect(range.max).to be_nil
   end
 
-  it "raises TypeError when called on an exclusive range and a non Integer value" do
-    expect { (303.20...908.1111).max }.to raise_error(TypeError)
+  it 'returns nil for backward range' do
+    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+    expect(range.max).to be_nil
   end
 
-  it "returns nil when the endpoint is less than the start point" do
-    expect((100..10).max).to be_nil
-    expect(('z'..'l').max).to be_nil
+  it 'returns self.end for beginingless range and non-Numeric self.end' do
+    range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+    expect(range.max).to eq(RangeSpecs::WithSucc.new(4))
   end
 
-  it "returns nil when the endpoint equals the start point and the range is exclusive" do
-    expect((5...5).max).to be_nil
-  end
+  it 'raises RangeError for beginingless range with excluded end and non-Numeric self.end' do
+    range = Range.new(nil, RangeSpecs::WithSucc.new(4), true)
 
-  it "returns the endpoint when the endpoint equals the start point and the range is inclusive" do
-    expect((5..5).max).to equal(5)
-  end
-
-  it "returns nil when the endpoint is less than the start point in a Float range" do
-    expect((3003.20..908.1111).max).to be_nil
-  end
-
-  it "returns end point when the range is Time..Time(included end point)" do
-    time_start = Time.now
-    time_end = Time.now + 1.0
-    expect((time_start..time_end).max).to equal(time_end)
-  end
-
-  it "raises TypeError when called on a Time...Time(excluded end point)" do
-    time_start = Time.now
-    time_end = Time.now + 1.0
-    expect { (time_start...time_end).max  }.to raise_error(TypeError)
-  end
-
-  it "raises RangeError when called on an endless range" do
-    expect { eval("(1..)").max }.to raise_error(RangeError)
-  end
-
-  it "returns the end point for beginless ranges" do
-    expect((..1).max).to eq(1)
-    expect((..1.0).max).to eq(1.0)
-  end
-
-  it "raises for an exclusive beginless range" do
     expect {
-      (...1).max
+      range.max
+    }.to raise_error(RangeError, 'cannot get the maximum of beginless range with custom comparison method')
+  end
+
+  it 'returns self.end for beginingless range and Numeric non-Integer self.end' do
+    range = Range.new(nil, RangeSpecs::Number.new(4))
+    expect(range.max).to eq(RangeSpecs::Number.new(4))
+  end
+
+  it 'raises RangeError for beginingless range with excluded end and Numeric non-Integer self.end' do
+    range = Range.new(nil, RangeSpecs::Number.new(4), true)
+
+    expect {
+      range.max
+    }.to raise_error(TypeError, 'cannot exclude non Integer end value')
+  end
+
+  it 'returns self.end for beginingless range and Integer self.end' do
+    range = Range.new(nil, 4)
+    expect(range.max).to eq(4)
+  end
+
+  # https://bugs.ruby-lang.org/issues/21175
+  it 'raises RangeError for beginingless range with excluded end and Integer self.end' do
+    range = Range.new(nil, 4, true)
+
+    expect {
+      range.max
     }.to raise_error(TypeError, 'cannot exclude end value with non Integer begin value')
   end
-end
 
-RSpec.describe "Range#max given a block" do
-  it "passes each pair of values in the range to the block" do
-    acc = []
-    (1..10).max {|a,b| acc << [a,b]; a }
-    acc.flatten!
-    (1..10).each do |value|
-      expect(acc.include?(value)).to be true
+  it 'ignores the right boundary if excluded end' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+    expect(range.max).to eq(RangeSpecs::WithSucc.new(3))
+  end
+
+  it 'raises TypeError if Numeric range with non-Integer self.end and excluded end' do
+    range = Range.new(RangeSpecs::Number.new(1), RangeSpecs::Number.new(4), true)
+
+    expect {
+      range.max
+    }.to raise_error(TypeError, 'cannot exclude non Integer end value')
+  end
+
+  it 'returns self.end if Integer range and excluded end' do
+    range = Range.new(1, 4, true)
+    expect(range.max).to eq(3)
+  end
+
+  it 'raises TypeError if Numeric range with non-Integer self.begin, Integer self.end and excluded end' do
+    range = Range.new(1.0, 4, true)
+
+    expect {
+      range.max
+    }.to raise_error(TypeError, 'cannot exclude end value with non Integer begin value')
+  end
+
+  context 'given an argument' do
+    it 'returns an array containing n rightmost elements' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+
+      expect(range.max(2)).to contain_exactly(
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+      )
+    end
+
+    it 'allows an argument n be greater than elements number' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+
+      expect(range.max(10)).to contain_exactly(
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+      )
+    end
+
+    it 'ignores the right boundary if excluded end' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+
+      expect(range.max(2)).to contain_exactly(
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3)
+      )
+    end
+
+    it 'raises an ArgumentError when n is negative' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+      expect { range.max(-1) }.to raise_error(ArgumentError, 'negative size (-1)')
+    end
+
+    it 'raises a RangeError when passed a Bignum' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+
+      expect {
+        range.max(bignum_value)
+      }.to raise_error(RangeError, "bignum too big to convert into 'long'")
+    end
+
+    it 'returns [] for empty range' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+      expect(range.max(2)).to eq([])
+    end
+
+    it 'returns [] for backward range' do
+      range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+      expect(range.max(2)).to eq([])
+    end
+
+    it 'raises RangeError if beginingless range' do
+      range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+
+      expect {
+        range.max(2)
+      }.to raise_error(RangeError, 'cannot get the maximum of beginless range with custom comparison method')
+    end
+
+    it 'raises RangeError for beginingless range with excluded end' do
+      range = Range.new(nil, RangeSpecs::WithSucc.new(4), true)
+
+      expect {
+        range.max(2)
+      }.to raise_error(RangeError, 'cannot get the maximum of beginless range with custom comparison method')
+    end
+
+    # https://bugs.ruby-lang.org/issues/21174
+    it 'raises RangeError for beginingless range with excluded end and Integer self.end' do
+      range = Range.new(nil, 4, true)
+
+      expect {
+        range.max(2)
+      }.to raise_error(RangeError, 'cannot get the maximum of beginless range with custom comparison method')
+    end
+
+    it 'raises RangeError if endless range' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), nil)
+
+      expect {
+        range.max(2)
+      }.to raise_error(RangeError, 'cannot get the maximum of endless range')
+    end
+
+    describe 'argument conversion to Integer' do
+      it 'converts the passed argument to an Integer using #to_int' do
+        range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+        n = double('n', to_int: 2)
+
+        expect(range.max(n)).to contain_exactly(
+          RangeSpecs::WithSucc.new(3),
+          RangeSpecs::WithSucc.new(4)
+        )
+      end
+
+      it 'raises a TypeError if the passed argument does not respond to #to_int' do
+        range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+        expect { range.max('a') }.to raise_error(TypeError, 'no implicit conversion of String into Integer')
+      end
+
+      it 'raises a TypeError if the passed argument responds to #to_int but it returns non-Integer value' do
+        range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+        n = double('n', to_int: 'a')
+
+        expect {
+          range.max(n)
+        }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")
+      end
     end
   end
 
-  it "passes each pair of elements to the block in reversed order" do
-    acc = []
-    (1..5).max {|a,b| acc << [a,b]; a }
-    expect(acc).to eq([[2,1],[3,2], [4,3], [5, 4]])
-  end
+  context 'given a block' do
+    it 'compares elements using a block' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+      expect(range.max { |a, b| a <=> b }).to eq(RangeSpecs::WithSucc.new(4))
+    end
 
-  it "calls #> and #< on the return value of the block" do
-    obj = double('obj')
-    expect(obj).to receive(:>).exactly(2).times
-    expect(obj).to receive(:<).exactly(2).times
-    (1..3).max {|a,b| obj }
-  end
+    it 'returns an array containing the maximum n elements' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
-  it "returns the element the block determines to be the maximum" do
-    expect((1..3).max {|a,b| -3 }).to eq(1)
-  end
+      expect(range.max(2) { |a, b| a <=> b }).to contain_exactly(
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+      )
+    end
 
-  it "returns nil when the endpoint is less than the start point" do
-    expect((100..10).max {|x,y| x <=> y}).to be_nil
-    expect(('z'..'l').max {|x,y| x <=> y}).to be_nil
-    expect((5...5).max {|x,y| x <=> y}).to be_nil
-  end
+    it 'returns nil for empty range' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+      expect(range.max { |a, b| a <=> b }).to be_nil
+    end
 
-  it "raises RangeError when called with custom comparison method on an beginless range" do
-    expect { (..1).max {|a, b| a} }.to raise_error(RangeError)
+    it 'returns nil for backward range' do
+      range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+      expect(range.max { |a, b| a <=> b }).to be_nil
+    end
+
+    it 'raises RangeError if beginingless range' do
+      range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+
+      expect {
+        range.max { |a, b| a <=> b }
+      }.to raise_error(RangeError, 'cannot get the maximum of beginless range with custom comparison method')
+    end
+
+    it 'raises RangeError for beginingless range with excluded end' do
+      range = Range.new(nil, RangeSpecs::WithSucc.new(4), true)
+
+      expect {
+        range.max { |a, b| a <=> b }
+      }.to raise_error(RangeError, 'cannot get the maximum of beginless range with custom comparison method')
+    end
+
+    it 'raises RangeError if endless range' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), nil)
+
+      expect {
+        range.max { |a, b| a <=> b }
+      }.to raise_error(RangeError, 'cannot get the maximum of endless range')
+    end
+
+    it 'ignores the right boundary if excluded end' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+      expect(range.max { |a, b| a <=> b }).to eq(RangeSpecs::WithSucc.new(3))
+    end
   end
 end

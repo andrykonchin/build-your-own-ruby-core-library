@@ -1,170 +1,275 @@
-# -*- encoding: binary -*-
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#include?" do
-  #it_behaves_like :range_cover_and_include, :include?
-
-  it "returns true if other is an element of self" do
-    expect((0..5).include?(2)).to eq(true)
-    expect((-5..5).include?(0)).to eq(true)
-    expect((-1...1).include?(10.5)).to eq(false)
-    expect((-10..-2).include?(-2.5)).to eq(true)
-    expect(('C'..'X').include?('M')).to eq(true)
-    expect(('C'..'X').include?('A')).to eq(false)
-    expect(('B'...'W').include?('W')).to eq(false)
-    expect(('B'...'W').include?('Q')).to eq(true)
-    expect((0xffff..0xfffff).include?(0xffffd)).to eq(true)
-    expect((0xffff..0xfffff).include?(0xfffd)).to eq(false)
-    expect((0.5..2.4).include?(2)).to eq(true)
-    expect((0.5..2.4).include?(2.5)).to eq(false)
-    expect((0.5..2.4).include?(2.4)).to eq(true)
-    expect((0.5...2.4).include?(2.4)).to eq(false)
+RSpec.describe 'Range#include?' do
+  it 'returns whether object is an element of self using #== to compare' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    expect(range.include?(RangeSpecs::WithSucc.new(2))).to be true
+    expect(range.include?(RangeSpecs::WithSucc.new(5))).to be false
   end
 
-  it "returns true if other is an element of self for endless ranges" do
-    expect(eval("(1..)").include?(2.4)).to eq(true)
-    expect(eval("(0.5...)").include?(2.4)).to eq(true)
+  it 'ignores self.end if excluded end' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+    expect(range.include?(RangeSpecs::WithSucc.new(4))).to be false
   end
 
-  it "returns true if other is an element of self for beginless ranges" do
-    expect((..10).include?(2.4)).to eq(true)
-    expect((...10.5).include?(2.4)).to eq(true)
+  it 'returns false if backward range' do
+    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+    expect(range.include?(RangeSpecs::WithSucc.new(2))).to be false
   end
 
-  it "compares values using <=>" do
-    rng = (1..5)
-    m = double("int")
-    expect(m).to receive(:coerce).and_return([1, 2])
-    expect(m).to receive(:<=>).and_return(1)
-
-    expect(rng.include?(m)).to be false
+  it 'returns false if empty range' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(1), true)
+    expect(range.include?(RangeSpecs::WithSucc.new(1))).to be false
   end
 
-  it "raises an ArgumentError without exactly one argument" do
-    expect{ (1..2).include? }.to raise_error(ArgumentError)
-    expect{ (1..2).include?(1, 2) }.to raise_error(ArgumentError)
+  it 'raises TypeError for beginingless ranges' do
+    expect {
+      Range.new(nil, RangeSpecs::Element.new(10)).include?(Object.new)
+    }.to raise_error(TypeError, 'cannot determine inclusion in beginless/endless ranges')
   end
 
-  it "returns true if argument is equal to the first value of the range" do
-    expect((0..5).include?(0)).to be true
-    expect(('f'..'s').include?('f')).to be true
+  it 'raises TypeError for endless ranges' do
+    expect {
+      Range.new(RangeSpecs::Element.new(0), nil).include?(Object.new)
+    }.to raise_error(TypeError, 'cannot determine inclusion in beginless/endless ranges')
   end
 
-  it "returns true if argument is equal to the last value of the range" do
-    expect((0..5).include?(5)).to be true
-    expect((0...5).include?(4)).to be true
-    expect(('f'..'s').include?('s')).to be true
+  it 'raises TypeError for (nil..nil)' do
+    expect {
+      Range.new(nil, nil).include?(Object.new)
+    }.to raise_error(TypeError, 'cannot determine inclusion in beginless/endless ranges')
   end
 
-  it "returns true if argument is less than the last value of the range and greater than the first value" do
-    expect((20..30).include?(28)).to be true
-    expect(('e'..'h').include?('g')).to be true
+  it "returns false if an argument isn't comparable with range boundaries" do
+    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(6))
+    expect(range.include?(Object.new)).to be false
   end
 
-  it "returns true if argument is sole element in the range" do
-    expect((30..30).include?(30)).to be true
-  end
-
-  it "returns false if range is empty" do
-    expect((30...30).include?(30)).to be false
-    expect((30...30).include?(nil)).to be false
-  end
-
-  it "returns false if the range does not contain the argument" do
-    expect(('A'..'C').include?(20.9)).to be false
-    expect(('A'...'C').include?('C')).to be false
-  end
-
-  #it_behaves_like :range_include, :include?
-
-  describe "on string elements" do
-    it "returns true if other is matched by element.succ" do
-      expect(('a'..'c').include?('b')).to be true
-      expect(('a'...'c').include?('b')).to be true
+  context 'Numeric ranges' do
+    it 'returns true if object is between self.begin and self.end' do
+      range = Range.new(RangeSpecs::Number.new(0), RangeSpecs::Number.new(6))
+      object = RangeSpecs::Number.new(5)
+      expect(range.include?(object)).to be true
     end
 
-    it "returns false if other is not matched by element.succ" do
-      expect(('a'..'c').include?('bc')).to be false
-      expect(('a'...'c').include?('bc')).to be false
+    it 'returns false if object is smaller than self.begin' do
+      range = Range.new(RangeSpecs::Number.new(0), RangeSpecs::Number.new(6))
+      object = RangeSpecs::Number.new(-5)
+      expect(range.include?(object)).to be false
     end
-  end
 
-  describe "with weird succ" do
-    describe "when included end value" do
-      before :each do
-        @range = RangeSpecs::TenfoldSucc.new(1)..RangeSpecs::TenfoldSucc.new(99)
+    it 'returns false if object is greater than self.end' do
+      range = Range.new(RangeSpecs::Number.new(0), RangeSpecs::Number.new(6))
+      object = RangeSpecs::Number.new(10)
+      expect(range.include?(object)).to be false
+    end
+
+    it 'ignores end if excluded end' do
+      range = Range.new(RangeSpecs::Number.new(0), RangeSpecs::Number.new(6), true)
+      object = RangeSpecs::Number.new(6)
+      expect(range.include?(object)).to be false
+    end
+
+    it 'returns true if argument is a single element in the range' do
+      range = Range.new(RangeSpecs::Number.new(0), RangeSpecs::Number.new(0))
+      object = RangeSpecs::Number.new(0)
+      expect(range.include?(object)).to be true
+    end
+
+    it 'returns false if range is empty' do
+      range = Range.new(RangeSpecs::Number.new(0), RangeSpecs::Number.new(0), true)
+      object = RangeSpecs::Number.new(0)
+      expect(range.include?(object)).to be false
+    end
+
+    it "returns false if an argument isn't comparable with range boundaries" do
+      range = Range.new(RangeSpecs::Number.new(0), RangeSpecs::Number.new(6))
+      expect(range.include?(Object.new)).to be false
+    end
+
+    context 'beginingless range' do
+      it 'returns false if object is greater than self.end' do
+        range = Range.new(nil, RangeSpecs::Number.new(6))
+        object = RangeSpecs::Number.new(10)
+        expect(range.include?(object)).to be false
       end
 
-      it "returns false if other is less than first element" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(0))).to be false
-      end
-
-      it "returns true if other is equal as first element" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(1))).to be true
-      end
-
-      it "returns true if other is matched by element.succ" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(10))).to be true
-      end
-
-      it "returns false if other is not matched by element.succ" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(2))).to be false
-      end
-
-      it "returns false if other is equal as last element but not matched by element.succ" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(99))).to be false
-      end
-
-      it "returns false if other is greater than last element but matched by element.succ" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(100))).to be false
+      it 'returns true if object is smaller than self.end' do
+        range = Range.new(nil, RangeSpecs::Number.new(6))
+        object = RangeSpecs::Number.new(0)
+        expect(range.include?(object)).to be true
       end
     end
 
-    describe "when excluded end value" do
-      before :each do
-        @range = RangeSpecs::TenfoldSucc.new(1)...RangeSpecs::TenfoldSucc.new(99)
+    context 'endless range' do
+      it 'returns true if object is greater than self.begin' do
+        range = Range.new(RangeSpecs::Number.new(0), nil)
+        object = RangeSpecs::Number.new(10)
+        expect(range.include?(object)).to be true
       end
 
-      it "returns false if other is less than first element" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(0))).to be false
+      it 'returns false if object is smaller than self.begin' do
+        range = Range.new(RangeSpecs::Number.new(0), nil)
+        object = RangeSpecs::Number.new(-10)
+        expect(range.include?(object)).to be false
       end
+    end
 
-      it "returns true if other is equal as first element" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(1))).to be true
-      end
-
-      it "returns true if other is matched by element.succ" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(10))).to be true
-      end
-
-      it "returns false if other is not matched by element.succ" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(2))).to be false
-      end
-
-      it "returns false if other is equal as last element but not matched by element.succ" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(99))).to be false
-      end
-
-      it "returns false if other is greater than last element but matched by element.succ" do
-        expect(@range.include?(RangeSpecs::TenfoldSucc.new(100))).to be false
-      end
+    it "returns false if object isn't comparable with self.begin and self.end (that's #<=> returns nil)" do
+      range = Range.new(RangeSpecs::Number.new(0), RangeSpecs::Number.new(6))
+      object = double('non-comparable', '<=>': nil)
+      expect(range.include?(object)).to be false
     end
   end
 
-  describe "with Time endpoints" do
-    it "uses cover? logic" do
-      now = Time.now
-      range = (now..(now + 60))
+  context 'Time ranges' do
+    # Use 1700000000 as a base timestamp.
+    #   Time.at(1700000000) # => 2023-11-15 00:13:20 +0200
 
-      expect(range.include?(now)).to eq(true)
-      expect(range.include?(now - 1)).to eq(false)
-      expect(range.include?(now + 60)).to eq(true)
-      expect(range.include?(now + 61)).to eq(false)
+    it 'returns true if object is between self.begin and self.end' do
+      range = Range.new(Time.at(1_700_000_000), Time.at(1_700_000_000 + 6))
+      object = Time.at(1_700_000_000 + 5)
+      expect(range.include?(object)).to be true
+    end
+
+    it 'returns false if object is smaller than self.begin' do
+      range = Range.new(Time.at(1_700_000_000), Time.at(1_700_000_000 + 6))
+      object = Time.at(1_700_000_000 - 5)
+      expect(range.include?(object)).to be false
+    end
+
+    it 'returns false if object is greater than self.end' do
+      range = Range.new(Time.at(1_700_000_000), Time.at(1_700_000_000 + 6))
+      object = Time.at(1_700_000_000 + 10)
+      expect(range.include?(object)).to be false
+    end
+
+    it 'ignores end if excluded end' do
+      range = Range.new(Time.at(1_700_000_000), Time.at(1_700_000_000 + 6), true)
+      object = Time.at(1_700_000_000 + 6)
+      expect(range.include?(object)).to be false
+    end
+
+    it 'returns true if argument is a single element in the range' do
+      range = Range.new(Time.at(1_700_000_000), Time.at(1_700_000_000))
+      object = Time.at(1_700_000_000)
+      expect(range.include?(object)).to be true
+    end
+
+    it 'returns false if range is empty' do
+      range = Range.new(Time.at(1_700_000_000), Time.at(1_700_000_000), true)
+      object = Time.at(1_700_000_000)
+      expect(range.include?(object)).to be false
+    end
+
+    it "returns false if an argument isn't comparable with range boundaries" do
+      range = Range.new(Time.at(1_700_000_000), Time.at(1_700_000_000 + 6))
+      expect(range.include?(Object.new)).to be false
+    end
+
+    context 'beginingless range' do
+      it 'returns false if object is greater than self.end' do
+        range = Range.new(nil, Time.at(1_700_000_000 + 6))
+        object = Time.at(1_700_000_000 + 10)
+        expect(range.include?(object)).to be false
+      end
+
+      it 'returns true if object is smaller than self.end' do
+        range = Range.new(nil, Time.at(1_700_000_000 + 6))
+        object = Time.at(1_700_000_000)
+        expect(range.include?(object)).to be true
+      end
+    end
+
+    context 'endless range' do
+      it 'returns true if object is greater than self.begin' do
+        range = Range.new(Time.at(1_700_000_000), nil)
+        object = Time.at(1_700_000_000 + 10)
+        expect(range.include?(object)).to be true
+      end
+
+      it 'returns false if object is smaller than self.begin' do
+        range = Range.new(Time.at(1_700_000_000 + 10), nil)
+        object = Time.at(1_700_000_000)
+        expect(range.include?(object)).to be false
+      end
+    end
+
+    it "returns false if object isn't comparable with self.begin and self.end (that's #<=> returns nil)" do
+      range = Range.new(Time.at(1_700_000_000), Time.at(1_700_000_000 + 6))
+      object = double('non-comparable', '<=>': nil)
+      expect(range.include?(object)).to be false
     end
   end
 
-  it "does not include U+9995 in the range U+0999..U+9999" do
-    expect(("\u{999}".."\u{9999}").include?("\u{9995}")).to be false
+  context 'String ranges' do
+    it 'returns whether object is an element of self using #== to compare' do
+      range = Range.new('a', 'ab')
+
+      expect(range.include?('b')).to be true
+      expect(range.include?('aa')).to be true
+      expect(range.include?('ac')).to be false
+    end
+
+    it 'ignores self.end if excluded end' do
+      range = Range.new('a', 'aa', true)
+      expect(range.include?('aa')).to be false
+    end
+
+    it 'returns false if backward range' do
+      range = Range.new('aa', 'a')
+      expect(range.include?('b')).to be false
+    end
+
+    it 'returns false if empty range' do
+      range = Range.new('aa', 'aa', true)
+      expect(range.include?('aa')).to be false
+    end
+
+    it 'raises TypeError for beginingless ranges' do
+      expect {
+        Range.new(nil, 'aa').include?(Object.new)
+      }.to raise_error(TypeError, 'cannot determine inclusion in beginless/endless ranges')
+    end
+
+    it 'raises TypeError for endless ranges' do
+      expect {
+        Range.new('aa', nil).include?(Object.new)
+      }.to raise_error(TypeError, 'cannot determine inclusion in beginless/endless ranges')
+    end
+
+    it "returns false if an argument isn't comparable with range boundaries" do
+      range = Range.new('a', 'aa')
+      expect(range.include?(Object.new)).to be false
+    end
+
+    it 'returns false if an argument is empty' do
+      range = Range.new('a', 'aa')
+      expect(range.include?('')).to be false
+    end
+
+    describe 'argument conversion to String' do
+      it 'converts the passed argument to a String using #to_str' do
+        range = Range.new('a', 'aa')
+        object = double('object', to_str: 'b')
+        expect(range.include?(object)).to be true
+      end
+
+      it 'returns false if the passed argument does not respond to #to_str' do
+        range = Range.new('a', 'aa')
+        expect(range.include?(nil)).to be false
+        expect(range.include?([])).to be false
+      end
+
+      it 'raises a TypeError if the passed argument responds to #to_str but it returns non-String value' do
+        range = Range.new('a', 'aa')
+        object = double('object', to_str: 1)
+
+        expect {
+          range.include?(object)
+        }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to String (RSpec::Mocks::Double#to_str gives Integer)")
+      end
+    end
   end
 end

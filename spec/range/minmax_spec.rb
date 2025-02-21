@@ -2,130 +2,84 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range#minmax' do
-  before(:each) do
-    @x = double('x')
-    @y = double('y')
+  it 'returns a 2-element array containing the minimum and the maximum elements using #<=> for comparison' do
+    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10))
 
-    expect(@x).to receive(:<=>).with(@y).at_least(:once).and_return(-1) # x < y
-    expect(@x).to receive(:<=>).with(@x).at_least(:once).and_return(0) # x == x
-    expect(@y).to receive(:<=>).with(@x).at_least(:once).and_return(1) # y > x
-    expect(@y).to receive(:<=>).with(@y).at_least(:once).and_return(0) # y == y
+    expect(range.minmax).to eq(
+      [
+        RangeSpecs::WithSucc.new(4),
+        RangeSpecs::WithSucc.new(10)
+      ]
+    )
   end
 
-  describe 'on an inclusive range' do
-    it 'should raise RangeError on an endless range without iterating the range' do
-      expect(@x).not_to receive(:succ)
+  it 'ignores the right boundary if excluded end' do
+    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10), true)
 
-      range = (@x..)
-
-      expect { range.minmax }.to raise_error(RangeError, 'cannot get the maximum of endless range')
-    end
-
-    it 'raises RangeError or ArgumentError on a beginless range' do
-      range = (..@x)
-
-      expect { range.minmax }.to raise_error(StandardError) { |e|
-        if RangeError === e
-          # error from #min
-          expect { raise e }.to raise_error(RangeError, 'cannot get the minimum of beginless range')
-        else
-          # error from #max
-          expect { raise e }.to raise_error(ArgumentError, 'comparison of NilClass with MockObject failed')
-        end
-      }
-    end
-
-    it 'should return beginning of range if beginning and end are equal without iterating the range' do
-      expect(@x).not_to receive(:succ)
-
-      expect((@x..@x).minmax).to eq([@x, @x])
-    end
-
-    it 'should return nil pair if beginning is greater than end without iterating the range' do
-      expect(@y).not_to receive(:succ)
-
-      expect((@y..@x).minmax).to eq([nil, nil])
-    end
-
-    it 'should return the minimum and maximum values for a non-numeric range without iterating the range' do
-      expect(@x).not_to receive(:succ)
-
-      expect((@x..@y).minmax).to eq([@x, @y])
-    end
-
-    it 'should return the minimum and maximum values for a numeric range' do
-      expect((1..3).minmax).to eq([1, 3])
-    end
-
-    it 'should return the minimum and maximum values for a numeric range without iterating the range' do
-      # We cannot set expectations on integers,
-      # so we "prevent" iteration by picking a value that would iterate until the spec times out.
-      range_end = Float::INFINITY
-
-      expect((1..range_end).minmax).to eq([1, range_end])
-    end
-
-    it 'should return the minimum and maximum values according to the provided block by iterating the range' do
-      expect(@x).to receive(:succ).once.and_return(@y)
-
-      expect((@x..@y).minmax { |x, y| - (x <=> y) }).to eq([@y, @x])
-    end
+    expect(range.minmax).to eq(
+      [
+        RangeSpecs::WithSucc.new(4),
+        RangeSpecs::WithSucc.new(9)
+      ]
+    )
   end
 
-  describe 'on an exclusive range' do
-    it 'should raise RangeError on an endless range' do
-      expect(@x).not_to receive(:succ)
-      range = (@x...)
+  it 'raises RangeError if beginingless range' do
+    range = Range.new(nil, RangeSpecs::WithSucc.new(10))
 
-      expect { range.minmax }.to raise_error(RangeError, 'cannot get the maximum of endless range')
+    expect {
+      range.minmax
+    }.to raise_error(RangeError, 'cannot get the minimum of beginless range')
+  end
+
+  it 'raises RangeError if endless range' do
+    range = Range.new(RangeSpecs::WithSucc.new(4), nil)
+
+    expect {
+      range.minmax
+    }.to raise_error(RangeError, 'cannot get the maximum of endless range')
+  end
+
+  it 'returns [nil, nil] if empty range' do
+    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+    expect(range.minmax).to eq([nil, nil])
+  end
+
+  it 'returns [nil, nil] if range is backward' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(0))
+    expect(range.minmax).to eq([nil, nil])
+  end
+
+  it 'returns [element, element] if range contain only one element' do
+    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0))
+    expect(range.minmax).to eq([RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0)])
+  end
+
+  context 'given a block' do
+    it 'compares elements using a block' do
+      range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10))
+
+      expect(range.minmax { |a, b| b <=> a }).to eq(
+        [
+          RangeSpecs::WithSucc.new(10),
+          RangeSpecs::WithSucc.new(4)
+        ]
+      )
     end
 
-    it 'should raise RangeError on a beginless range' do
-      range = (...@x)
+    it 'raises TypeError if beginingless range' do
+      range = Range.new(nil, RangeSpecs::WithSucc.new(10))
 
-      expect { range.minmax }.to raise_error(RangeError,
-        /cannot get the maximum of beginless range with custom comparison method|cannot get the minimum of beginless range/)
+      expect {
+        range.minmax { |a, b| b <=> a }
+      }.to raise_error(TypeError, "can't iterate from NilClass")
     end
 
-    it 'should return nil pair if beginning and end are equal without iterating the range' do
-      expect(@x).not_to receive(:succ)
+    it 'iterates indefinitly if endless range' do
+      range = Range.new(RangeSpecs::WithSucc.new(4), nil)
 
-      expect((@x...@x).minmax).to eq([nil, nil])
-    end
-
-    it 'should return nil pair if beginning is greater than end without iterating the range' do
-      expect(@y).not_to receive(:succ)
-
-      expect((@y...@x).minmax).to eq([nil, nil])
-    end
-
-    it 'should return the minimum and maximum values for a non-numeric range by iterating the range' do
-      expect(@x).to receive(:succ).once.and_return(@y)
-
-      expect((@x...@y).minmax).to eq([@x, @x])
-    end
-
-    it 'should return the minimum and maximum values for a numeric range' do
-      expect((1...3).minmax).to eq([1, 2])
-    end
-
-    it 'should return the minimum and maximum values for a numeric range without iterating the range' do
-      # We cannot set expectations on integers,
-      # so we "prevent" iteration by picking a value that would iterate until the spec times out.
-      range_end = bignum_value
-
-      expect((1...range_end).minmax).to eq([1, range_end - 1])
-    end
-
-    it 'raises TypeError if the end value is not an integer' do
-      range = (0...Float::INFINITY)
-      expect { range.minmax }.to raise_error(TypeError, 'cannot exclude non Integer end value')
-    end
-
-    it 'should return the minimum and maximum values according to the provided block by iterating the range' do
-      expect(@x).to receive(:succ).once.and_return(@y)
-
-      expect((@x...@y).minmax { |x, y| - (x <=> y) }).to eq([@x, @x])
+      count = 0
+      expect(range.minmax { |a, b| break :aborted if count > 10; count += 1; b <=> a }).to eq(:aborted)
     end
   end
 end

@@ -1,64 +1,171 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#last" do
-  it "end returns the last element of self" do
-    expect((-1..1).last).to eq(1)
-    expect((0..1).last).to eq(1)
-    expect(("A".."Q").last).to eq("Q")
-    expect(("A"..."Q").last).to eq("Q")
-    expect((0xffff...0xfffff).last).to eq(1048575)
-    expect((0.5..2.4).last).to eq(2.4)
+RSpec.describe 'Range#last' do
+  it 'returns self.end' do # rubocop:disable RSpec/RepeatedExample
+    a = RangeSpecs::Element.new(0)
+    b = RangeSpecs::Element.new(1)
+
+    range = Range.new(a, b, true)
+    expect(range.last).to equal(b)
   end
 
-  it "returns the specified number of elements from the end" do
-    expect((1..5).last(3)).to eq([3, 4, 5])
+  it 'returns self.end even when end is excluded' do # rubocop:disable RSpec/RepeatedExample
+    a = RangeSpecs::Element.new(0)
+    b = RangeSpecs::Element.new(1)
+
+    range = Range.new(a, b, true)
+    expect(range.last).to equal(b)
   end
 
-  it "returns the specified number if elements for single element inclusive range" do
-    expect((1..1).last(1)).to eq([1])
+  it 'returns self.end even when self is empty' do
+    a = RangeSpecs::Element.new(0)
+    range = Range.new(a, a, true)
+
+    expect(range.last).to equal(a)
   end
 
-  it "returns an empty array for an empty Range" do
-    expect((0...0).last(2)).to eq([])
+  it 'returns self.end even when self is backward' do
+    a = RangeSpecs::Element.new(0)
+    b = RangeSpecs::Element.new(1)
+
+    range = Range.new(b, a)
+    expect(range.last).to equal(a)
   end
 
-  it "returns an empty array when passed zero" do
-    expect((0..2).last(0)).to eq([])
+  it 'returns self.end when beginingless range' do
+    a = RangeSpecs::Element.new(1)
+    range = Range.new(nil, a)
+
+    expect(range.last).to equal(a)
   end
 
-  it "returns all elements in the range when count exceeds the number of elements" do
-    expect((2..4).last(5)).to eq([2, 3, 4])
+  it 'returns self.end when a range is not iterable' do
+    a = RangeSpecs::WithoutSucc.new(0)
+    b = RangeSpecs::WithoutSucc.new(1)
+
+    range = Range.new(a, b)
+    expect(range.last).to equal(b)
   end
 
-  it "raises an ArgumentError when count is negative" do
-    expect { (0..2).last(-1) }.to raise_error(ArgumentError)
+  it 'raises RangeError if endless range' do
+    a = RangeSpecs::WithSucc.new(0)
+    range = Range.new(a, nil)
+
+    expect {
+      range.last
+    }.to raise_error(RangeError, 'cannot get the last element of endless range')
   end
 
-  it "calls #to_int to convert the argument" do
-    obj = mock_int(2)
-    expect((3..7).last(obj)).to eq([6, 7])
-  end
+  describe 'given an argument' do
+    it 'returns the last n elements in an array' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
-  it "raises a TypeError if #to_int does not return an Integer" do
-    obj = double("to_int")
-    expect(obj).to receive(:to_int).and_return("1")
-    expect { (2..3).last(obj) }.to raise_error(TypeError)
-  end
+      expect(range.last(2)).to eq(
+        [
+          RangeSpecs::WithSucc.new(3),
+          RangeSpecs::WithSucc.new(4)
+        ]
+      )
+    end
 
-  it "truncates the value when passed a Float" do
-    expect((2..9).last(2.8)).to eq([8, 9])
-  end
+    it "doesn't yield self.end when end is excluded" do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
 
-  it "raises a TypeError when passed nil" do
-    expect { (2..3).last(nil) }.to raise_error(TypeError)
-  end
+      expect(range.last(4)).to eq(
+        [
+          RangeSpecs::WithSucc.new(1),
+          RangeSpecs::WithSucc.new(2),
+          RangeSpecs::WithSucc.new(3)
+        ]
+      )
+    end
 
-  it "raises a TypeError when passed a String" do
-    expect { (2..3).last("1") }.to raise_error(TypeError)
-  end
+    it 'returns an empty array when a range is empty' do
+      expect(Range.new(0, 0, true).last(2)).to eq([])
+    end
 
-  it "raises a RangeError when called on an endless range" do
-    expect { eval("(1..)").last }.to raise_error(RangeError)
+    it 'returns an empty array when a range is backward' do
+      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(0))
+      expect(range.last(2)).to eq([])
+    end
+
+    it 'returns an empty array when n is zero' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+      expect(range.last(0)).to eq([])
+    end
+
+    it 'raises RangeError when endless range' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), nil)
+
+      expect {
+        range.last(2)
+      }.to raise_error(RangeError, 'cannot get the last element of endless range')
+    end
+
+    it 'raises TypeError if a range is not iterable' do
+      range = Range.new(RangeSpecs::WithoutSucc.new(0), RangeSpecs::WithoutSucc.new(1))
+
+      expect {
+        range.last(2)
+      }.to raise_error(TypeError, "can't iterate from RangeSpecs::WithoutSucc")
+    end
+
+    it 'raises an ArgumentError when an argument is negative' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+
+      expect {
+        range.last(-1)
+      }.to raise_error(ArgumentError, 'negative array size')
+    end
+
+    it 'raises a RangeError when passed a Bignum' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+
+      expect {
+        range.last(bignum_value)
+      }.to raise_error(RangeError, "bignum too big to convert into 'long'")
+    end
+
+    it 'returns all elements in the range when n exceeds the number of elements' do
+      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+
+      expect(range.last(100)).to eq(
+        [
+          RangeSpecs::WithSucc.new(0),
+          RangeSpecs::WithSucc.new(1)
+        ]
+      )
+    end
+
+    describe 'argument conversion to Integer' do
+      it 'converts the passed argument to an Integer using #to_int' do
+        range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+        n = double('n', to_int: 2)
+
+        expect(range.last(n)).to eq(
+          [
+            RangeSpecs::WithSucc.new(0),
+            RangeSpecs::WithSucc.new(1)
+          ]
+        )
+      end
+
+      it 'raises a TypeError if the passed argument does not respond to #to_int' do
+        range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+
+        expect { range.last(nil) }.to raise_error(TypeError, 'no implicit conversion from nil to integer')
+        expect { range.last('a') }.to raise_error(TypeError, 'no implicit conversion of String into Integer')
+      end
+
+      it 'raises a TypeError if the passed argument responds to #to_int but it returns non-Integer value' do
+        range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
+        n = double('n', to_int: 'a')
+
+        expect {
+          range.last(n)
+        }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")
+      end
+    end
   end
 end

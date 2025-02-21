@@ -1,13 +1,24 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#end" do
-  it "end returns the last element of self" do
-    expect((-1..1).end).to eq(1)
-    expect((0..1).end).to eq(1)
-    expect(("A".."Q").end).to eq("Q")
-    expect(("A"..."Q").end).to eq("Q")
-    expect((0xffff...0xfffff).end).to eq(1048575)
-    expect((0.5..2.4).end).to eq(2.4)
+RSpec.describe 'Range#end' do
+  it 'returns the object that defines the end of a range' do
+    a = RangeSpecs::Element.new(0)
+    b = RangeSpecs::Element.new(1)
+    range = Range.new(a, b)
+    expect(range.end).to equal(b)
+  end
+
+  it 'returns nil for an endless range' do
+    a = RangeSpecs::Element.new(0)
+    range = Range.new(a, nil)
+    expect(range.end).to be_nil
+  end
+
+  it 'returns declared end of a range even if end is excluded' do
+    a = RangeSpecs::Element.new(0)
+    b = RangeSpecs::Element.new(1)
+    range = Range.new(a, b, true)
+    expect(range.end).to equal(b)
   end
 end

@@ -1,88 +1,340 @@
 require 'spec_helper'
 require_relative 'fixtures/classes'
 
-RSpec.describe "Range#overlap?" do
-  it "returns true if other Range overlaps self" do
-    expect((0..2).overlap?(1..3)).to eq(true)
-    expect((1..3).overlap?(0..2)).to eq(true)
-    expect((0..2).overlap?(0..2)).to eq(true)
-    expect((0..3).overlap?(1..2)).to eq(true)
-    expect((1..2).overlap?(0..3)).to eq(true)
+RSpec.describe 'Range#overlap?' do
+  context 'given non-Range argument' do
+    it 'raises TypeError' do
+      a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10))
 
-    expect(('a'..'c').overlap?('b'..'d')).to eq(true)
+      expect {
+        a.overlap?(Object.new)
+      }.to raise_error(TypeError, 'wrong argument type Object (expected Range)')
+    end
   end
 
-  it "returns false if other Range does not overlap self" do
-    expect((0..2).overlap?(3..4)).to eq(false)
-    expect((0..2).overlap?(-4..-1)).to eq(false)
+  context 'given Range argument' do
+    context 'other range is completely inside the self' do
+      it 'returns true if self.begin < other.begin and self.end > other.end' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10))
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be true
+      end
 
-    expect(('a'..'c').overlap?('d'..'f')).to eq(false)
-  end
+      it 'returns true if self is beginingless and self.end > other.end' do
+        a = Range.new(nil, RangeSpecs::Element.new(10))
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be true
+      end
 
-  it "raises TypeError when called with non-Range argument" do
-    expect {
-      (0..2).overlap?(1)
-    }.to raise_error(TypeError, "wrong argument type Integer (expected Range)")
-  end
+      it 'returns true if self and other are beginingless and self.end > other.end' do
+        a = Range.new(nil, RangeSpecs::Element.new(10))
+        b = Range.new(nil, RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be true
+      end
 
-  it "returns true when beginningless and endless Ranges overlap" do
-    expect((0..2).overlap?(..3)).to eq(true)
-    expect((0..2).overlap?(..1)).to eq(true)
-    expect((0..2).overlap?(..0)).to eq(true)
+      it 'returns true if self is endless and self.begin < other.begin' do
+        a = Range.new(RangeSpecs::Element.new(0), nil)
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be true
+      end
 
-    expect((..3).overlap?(0..2)).to eq(true)
-    expect((..1).overlap?(0..2)).to eq(true)
-    expect((..0).overlap?(0..2)).to eq(true)
+      it 'returns true if self and other are endless and self.begin < other.begin' do
+        a = Range.new(RangeSpecs::Element.new(0), nil)
+        b = Range.new(RangeSpecs::Element.new(4), nil)
+        expect(a.overlap?(b)).to be true
+      end
 
-    expect((0..2).overlap?(-1..)).to eq(true)
-    expect((0..2).overlap?(1..)).to eq(true)
-    expect((0..2).overlap?(2..)).to eq(true)
+      it 'return true if self is (nil..nil) and other is finit' do
+        a = Range.new(nil, nil)
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be true
+      end
 
-    expect((-1..).overlap?(0..2)).to eq(true)
-    expect((1..).overlap?(0..2)).to eq(true)
-    expect((2..).overlap?(0..2)).to eq(true)
+      it 'return true if self is (nil..nil) and other is beginingless' do
+        a = Range.new(nil, nil)
+        b = Range.new(nil, RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be true
+      end
 
-    expect((0..).overlap?(2..)).to eq(true)
-    expect((..0).overlap?(..2)).to eq(true)
-  end
+      it 'return true if self is (nil..nil) and other is endless' do
+        a = Range.new(nil, nil)
+        b = Range.new(RangeSpecs::Element.new(4), nil)
+        expect(a.overlap?(b)).to be true
+      end
+    end
 
-  it "returns false when beginningless and endless Ranges do not overlap" do
-    expect((0..2).overlap?(..-1)).to eq(false)
-    expect((0..2).overlap?(3..)).to eq(false)
+    context 'self is completely inside the other range' do
+      it 'returns true if other.begin < self.begin and other.end > self.end' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
 
-    expect((..-1).overlap?(0..2)).to eq(false)
-    expect((3..).overlap?(0..2)).to eq(false)
-  end
+      it 'returns true if other is beginingless and other.end > self.end' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        b = Range.new(nil, RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
 
-  it "returns false when Ranges are not compatible" do
-    expect((0..2).overlap?('a'..'d')).to eq(false)
-  end
+      it 'returns true if other and self are beginingless and other.end > other.end' do
+        a = Range.new(nil, RangeSpecs::Element.new(6))
+        b = Range.new(nil, RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
 
-  it "return false when self is empty" do
-    expect((2..0).overlap?(1..3)).to eq(false)
-    expect((2...2).overlap?(1..3)).to eq(false)
-    expect((1...1).overlap?(1...1)).to eq(false)
-    expect((2..0).overlap?(2..0)).to eq(false)
+      it 'returns true if other is endless and other.begin < self.begin' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        b = Range.new(RangeSpecs::Element.new(0), nil)
+        expect(a.overlap?(b)).to be true
+      end
 
-    expect(('c'..'a').overlap?('b'..'d')).to eq(false)
-    expect(('a'...'a').overlap?('b'..'d')).to eq(false)
-    expect(('b'...'b').overlap?('b'...'b')).to eq(false)
-    expect(('c'...'a').overlap?('c'...'a')).to eq(false)
-  end
+      it 'returns true if other and self are endless and other.begin < self.begin' do
+        a = Range.new(RangeSpecs::Element.new(4), nil)
+        b = Range.new(RangeSpecs::Element.new(0), nil)
+        expect(a.overlap?(b)).to be true
+      end
 
-  it "return false when other Range is empty" do
-    expect((1..3).overlap?(2..0)).to eq(false)
-    expect((1..3).overlap?(2...2)).to eq(false)
+      it 'return true if other is (nil..nil) and self is finit' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        b = Range.new(nil, nil)
+        expect(a.overlap?(b)).to be true
+      end
 
-    expect(('b'..'d').overlap?('c'..'a')).to eq(false)
-    expect(('b'..'d').overlap?('c'...'c')).to eq(false)
-  end
+      it 'return true if other is (nil..nil) and self is beginingless' do
+        a = Range.new(nil, RangeSpecs::Element.new(6))
+        b = Range.new(nil, nil)
+        expect(a.overlap?(b)).to be true
+      end
 
-  it "takes into account exclusive end" do
-    expect((0...2).overlap?(2..4)).to eq(false)
-    expect((2..4).overlap?(0...2)).to eq(false)
+      it 'return true if other is (nil..nil) and self is endless' do
+        a = Range.new(RangeSpecs::Element.new(4), nil)
+        b = Range.new(nil, nil)
+        expect(a.overlap?(b)).to be true
+      end
+    end
 
-    expect(('a'...'c').overlap?('c'..'e')).to eq(false)
-    expect(('c'..'e').overlap?('a'...'c')).to eq(false)
+    context 'partially interleave' do
+      it 'returns true if self.begin > other.begin, self.begin < other.end and self.end > other.end' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(10))
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self.begin > other.begin, self.begin < other.end and self.end == other.end' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(10))
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self.begin > other.begin, self.begin < other.end and self.end < other.end' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self.begin < other.begin and self.end > other.begin, self.end < other.end' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(6))
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self.begin < other.begin and self.end == other.end and self.exclude_end? is true' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10), true)
+        b = Range.new(RangeSpecs::Element.new(6), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self.begin < other.begin and self.end == other.begin' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(4))
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self is beginingless and self.end > other.begin but self.end < other.end' do
+        a = Range.new(nil, RangeSpecs::Element.new(6))
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self is beginingless and self.end == other.end but self.exclude_end? is true' do
+        a = Range.new(nil, RangeSpecs::Element.new(6), true)
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self and other are beginingless but self.end < other.end' do
+        a = Range.new(nil, RangeSpecs::Element.new(6))
+        b = Range.new(nil, RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self and other are beginingless and self.end == other.end but self.exclude_end? is true' do
+        a = Range.new(nil, RangeSpecs::Element.new(10), true)
+        b = Range.new(nil, RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self is endless and self.begin > other.begin' do
+        a = Range.new(RangeSpecs::Element.new(4), nil)
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self and other are endless and self.begin > other.begin' do
+        a = Range.new(RangeSpecs::Element.new(4), nil)
+        b = Range.new(RangeSpecs::Element.new(0), nil)
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self and other are endless and self.begin == other.begin but self.exclude_end? is true' do
+        a = Range.new(RangeSpecs::Element.new(0), nil, true)
+        b = Range.new(RangeSpecs::Element.new(0), nil)
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self and other are endless and self.begin < other.begin but self.exclude_end? is true' do
+        a = Range.new(RangeSpecs::Element.new(0), nil, true)
+        b = Range.new(RangeSpecs::Element.new(4), nil)
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'return false if self is (nil...nil) and other is endless' do
+        a = Range.new(nil, nil, true)
+        b = Range.new(RangeSpecs::Element.new(4), nil)
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if self is beginingless and other is endless and self.end == other.begin' do
+        a = Range.new(nil, RangeSpecs::Element.new(10))
+        b = Range.new(RangeSpecs::Element.new(10), nil)
+        expect(a.overlap?(b)).to be true
+      end
+
+      it 'returns true if other is beginingless and self is endless and other.end == self.begin' do
+        a = Range.new(RangeSpecs::Element.new(10), nil)
+        b = Range.new(nil, RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be true
+      end
+    end
+
+    context 'not interleave' do
+      it 'returns false if self.begin > other.end' do
+        a = Range.new(RangeSpecs::Element.new(6), RangeSpecs::Element.new(10))
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(4))
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self.end < other.begin' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(4))
+        b = Range.new(RangeSpecs::Element.new(6), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self is beginingless but self.end < other.begin' do
+        a = Range.new(nil, RangeSpecs::Element.new(4))
+        b = Range.new(RangeSpecs::Element.new(6), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self is beginingless and self.end == other.begin but self.exclude_end? is true' do
+        a = Range.new(nil, RangeSpecs::Element.new(4), true)
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self is beginingless and other is endless but self.end < other.begin' do
+        a = Range.new(nil, RangeSpecs::Element.new(0))
+        b = Range.new(RangeSpecs::Element.new(10), nil)
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self is beginingless and other is endless and self.end == other.begin but self.exclude_end? is true' do
+        a = Range.new(nil, RangeSpecs::Element.new(10), true)
+        b = Range.new(RangeSpecs::Element.new(10), nil)
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self is endless but self.begin > other.end' do
+        a = Range.new(RangeSpecs::Element.new(10), nil)
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self is endless but self.begin == other.end but other.exclude_end? is true' do
+        a = Range.new(RangeSpecs::Element.new(6), nil)
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(6), true)
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if other is beginingless but self.begin > other.end' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(10))
+        b = Range.new(nil, RangeSpecs::Element.new(0))
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if other is beginingless and self.begin == other.end but other.exclude_end? is true' do
+        a = Range.new(RangeSpecs::Element.new(6), RangeSpecs::Element.new(10))
+        b = Range.new(nil, RangeSpecs::Element.new(6), true)
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if other is beginingless and self is endless and other.end == self.begin but other.exclude_end? is true' do
+        a = Range.new(RangeSpecs::Element.new(10), nil)
+        b = Range.new(nil, RangeSpecs::Element.new(10), true)
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if other is endless but self.end < other.begin' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(4))
+        b = Range.new(RangeSpecs::Element.new(10), nil)
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if other is endless and self.end == other.begin but self.exclude_end? is true' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10), true)
+        b = Range.new(RangeSpecs::Element.new(10), nil)
+        expect(a.overlap?(b)).to be false
+      end
+    end
+
+    context 'backward ranges' do
+      it 'returns false if other is backward and fits into the self' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10))
+        b = Range.new(RangeSpecs::Element.new(6), RangeSpecs::Element.new(4))
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self is backward and other fits into the self' do
+        a = Range.new(RangeSpecs::Element.new(10), RangeSpecs::Element.new(0))
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(6))
+        expect(a.overlap?(b)).to be false
+      end
+    end
+
+    context 'empty ranges' do
+      it 'returns false if other is empty and fits into the self' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10))
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(4), true)
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self is empty and fits into the other' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(4), true)
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(10))
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self is empty and equals other' do
+        a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(0), true)
+        b = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(0), true)
+        expect(a.overlap?(b)).to be false
+      end
+
+      it 'returns false if self and other are empty and equal' do
+        a = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(4), true)
+        b = Range.new(RangeSpecs::Element.new(4), RangeSpecs::Element.new(4), true)
+        expect(a.overlap?(b)).to be false
+      end
+    end
   end
 end
