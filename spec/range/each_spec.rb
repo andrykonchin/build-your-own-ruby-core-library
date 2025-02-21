@@ -2,106 +2,133 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe "Range#each" do
-  it "passes each element to the given block by using #succ" do
-    a = []
-    (-5..5).each { |i| a << i }
-    expect(a).to eq([-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5])
-
-    a = []
-    ('A'..'D').each { |i| a << i }
-    expect(a).to eq(['A','B','C','D'])
-
-    a = []
-    ('A'...'D').each { |i| a << i }
-    expect(a).to eq(['A','B','C'])
-
-    a = []
-    (0xfffd...0xffff).each { |i| a << i }
-    expect(a).to eq([0xfffd, 0xfffe])
-
-    y = double('y')
-    x = double('x')
-    expect(x).to receive(:<=>).with(y).at_least(:once).and_return(-1)
-    expect(x).to receive(:<=>).with(x).at_least(:once).and_return(0)
-    expect(x).to receive(:succ).at_least(:once).and_return(y)
-    expect(y).to receive(:<=>).with(x).at_least(:once).and_return(1)
-    expect(y).to receive(:<=>).with(y).at_least(:once).and_return(0)
-
-    a = []
-    (x..y).each { |i| a << i }
-    expect(a).to eq([x, y])
+  before do
+    ScratchPad.record []
   end
 
-  it "works for non-ASCII ranges" do
-    a = []
-    ('Σ'..'Ω').each { |i| a << i }
-    expect(a).to eq(["Σ", "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω"])
+  it 'passes each element of self to the block' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    range.each { |e| ScratchPad << e }
+
+    expect(ScratchPad.recorded).to eq(
+      [
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+      ])
+  end
+
+  it "doesn't yield the right boundary if end is excluded" do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+    range.each { |e| ScratchPad << e }
+
+    expect(ScratchPad.recorded).to eq(
+      [
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3)
+      ])
+  end
+
+  it 'returns an Enumerator if no block given' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    e = range.each
+
+    expect(e).to be_an_instance_of(Enumerator)
+    expect(e.to_a).to eq(
+      [
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+      ])
+  end
+
+  it 'returns self if block given' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    expect(range.each {}).to equal(range)
+  end
+
+  it "iterates calling #succ on current element to get the next one" do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    range.each { |e| ScratchPad << e }
+
+    expect(ScratchPad.recorded).to eq(
+      [
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2),
+        RangeSpecs::WithSucc.new(3),
+        RangeSpecs::WithSucc.new(4)
+    ])
+  end
+
+  it "raises TypeError if a range is not iterable (that's some element doesn't respond to #succ)" do
+    range = Range.new(RangeSpecs::WithoutSucc.new(1), RangeSpecs::WithoutSucc.new(4))
+    expect {
+      range.each {}
+    }.to raise_error(TypeError, "can't iterate from RangeSpecs::WithoutSucc")
+
+    range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+    expect {
+      range.each {}
+    }.to raise_error(TypeError, "can't iterate from NilClass")
   end
 
   it "works with endless ranges" do
-    a = []
-    (-2..).each { |x| break if x > 2; a << x }
-    expect(a).to eq([-2, -1, 0, 1, 2])
+    range = Range.new(RangeSpecs::WithSucc.new(-2), nil)
+    range.each { |e| break if e.value > 2; ScratchPad << e }
 
-    a = []
-    (-2...).each { |x| break if x > 2; a << x }
-    expect(a).to eq([-2, -1, 0, 1, 2])
+    expect(ScratchPad.recorded).to eq(
+      [
+        RangeSpecs::WithSucc.new(-2),
+        RangeSpecs::WithSucc.new(-1),
+        RangeSpecs::WithSucc.new(0),
+        RangeSpecs::WithSucc.new(1),
+        RangeSpecs::WithSucc.new(2)
+      ])
   end
 
-  it "works with String endless ranges" do
-    a = []
-    ('A'..).each { |x| break if x > "D"; a << x }
-    expect(a).to eq(["A", "B", "C", "D"])
+  describe 'finit range' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns the range size when Numeric range' do
+          range = Range.new(1, 4)
+          expect(range.each.size).to eq(range.size)
 
-    a = []
-    ('A'...).each { |x| break if x > "D"; a << x }
-    expect(a).to eq(["A", "B", "C", "D"])
+          range = Range.new(4, 1)
+          expect(range.each.size).to eq(range.size)
+
+          range = Range.new(1, Float::INFINITY)
+          expect(range.each.size).to eq(range.size)
+        end
+
+        it "raises TypeError if a range is not iterable (that's some element doesn't respond to #succ)" do
+          range = Range.new(RangeSpecs::WithoutSucc.new(1), RangeSpecs::WithoutSucc.new(4))
+
+          expect {
+            range.each.size
+          }.to raise_error(TypeError, "can't iterate from RangeSpecs::WithoutSucc")
+        end
+
+        it 'size returns the range size when non-Numeric range' do
+          range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+          expect(range.each.size).to eq(range.size)
+        end
+      end
+    end
   end
 
-  it "raises a TypeError beginless ranges" do
-    expect { (..2).each { |x| x } }.to raise_error(TypeError)
-  end
+  describe 'infinit range' do
+    describe 'when no block is given' do
+      describe 'returned Enumerator' do
+        it 'size returns range size' do
+          range = Range.new(1, nil)
+          expect(range.each.size).to eq(range.size)
 
-  it "raises a TypeError if the first element does not respond to #succ" do
-    expect { (0.5..2.4).each { |i| i } }.to raise_error(TypeError)
-
-    b = double('x')
-    expect(a = double('1')).to receive(:<=>).with(b).and_return(1)
-
-    expect { (a..b).each { |i| i } }.to raise_error(TypeError)
-  end
-
-  it "returns self" do
-    range = 1..10
-    expect(range.each{}).to equal(range)
-  end
-
-  it "returns an enumerator when no block given" do
-    enum = (1..3).each
-    expect(enum).to be_an_instance_of(Enumerator)
-    expect(enum.to_a).to eq([1, 2, 3])
-  end
-
-  it "supports Time objects that respond to #succ" do
-    t = Time.utc(1970)
-    def t.succ; self + 1 end
-    t_succ = t.succ
-    def t_succ.succ; self + 1; end
-
-    expect((t..t_succ).to_a).to eq([Time.utc(1970), Time.utc(1970, nil, nil, nil, nil, 1)])
-    expect((t...t_succ).to_a).to eq([Time.utc(1970)])
-  end
-
-  it "passes each Symbol element by using #succ" do
-    expect((:aa..:ac).each.to_a).to eq([:aa, :ab, :ac])
-    expect((:aa...:ac).each.to_a).to eq([:aa, :ab])
-  end
-
-  describe "when no block is given" do
-    describe "returned Enumerator" do
-      it "size returns the enumerable size" do
-        object = (1..3)
-        expect(object.each.size).to eq(object.size)
+          range = Range.new(RangeSpecs::WithSucc.new(1), nil)
+          expect(range.each.size).to eq(range.size)
+        end
       end
     end
   end

@@ -77,7 +77,7 @@ RSpec.describe 'Enumerable#max_by' do
     end
   end
 
-  context 'when called with an argument n' do
+  context 'given an argument n' do
     it 'returns an array containing n elements for which a block returned the maximum values' do
       enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
       expect(enum.max_by(2) { |e| e }).to contain_exactly(3, 4)

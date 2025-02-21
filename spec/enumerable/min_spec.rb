@@ -57,7 +57,7 @@ RSpec.describe 'Enumerable#min' do
     }.to raise_error(ArgumentError, 'comparison of String with 11 failed')
   end
 
-  context 'when called with an argument n' do
+  context 'given an argument n' do
     it 'returns an array containing n smallest elements' do
       enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
       expect(enum.min(2)).to contain_exactly(1, 2)
