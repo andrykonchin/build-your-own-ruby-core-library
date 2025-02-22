@@ -39,7 +39,7 @@ RSpec.describe 'Enumerable#sum' do
     expect(enum.sum).to eq(1 + 2 + 3 + 4)
   end
 
-  context 'with a block' do
+  context 'given a block' do
     it 'returns the sum of initial value and the block return values' do
       enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
       expect(enum.sum(1) { |e| e * 10 }).to eq(1 + 10 + 20 + 30 + 40)

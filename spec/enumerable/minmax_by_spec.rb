@@ -55,6 +55,7 @@ RSpec.describe 'Enumerable#minmax_by' do
 
   it 'raises a NoMethodError for elements not responding to #<=>' do
     enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+
     expect {
       enum.minmax_by { BasicObject.new }
     }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
@@ -62,6 +63,7 @@ RSpec.describe 'Enumerable#minmax_by' do
 
   it 'raises an ArgumentError when elements are incompatible' do
     enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+
     expect {
       enum.minmax_by { EnumerableSpecs::Uncomparable.new }
     }.to raise_error(ArgumentError, 'comparison of EnumerableSpecs::Uncomparable with EnumerableSpecs::Uncomparable failed')

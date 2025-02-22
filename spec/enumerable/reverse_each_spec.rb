@@ -27,8 +27,9 @@ require_relative 'fixtures/classes'
 
 RSpec.describe 'Enumerable#reverse_each' do
   it 'traverses enum in reverse order' do
+    enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
     yielded = []
-    EnumerableSpecs::Numerous.new(1, 2, 3, 4).reverse_each { |i| yielded << i }
+    enum.reverse_each { |i| yielded << i }
     expect(yielded).to eq([4, 3, 2, 1])
   end
 

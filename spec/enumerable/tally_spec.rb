@@ -96,6 +96,7 @@ RSpec.describe 'Enumerable#tally' do
     it 'raises a FrozenError when the Hash is frozen even if enumerable is empty' do
       enum = EnumerableSpecs::Empty.new
       hash = { b: 1 }.freeze
+
       expect {
         enum.tally(hash)
       }.to raise_error(FrozenError, "can't modify frozen Hash: {b: 1}")

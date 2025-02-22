@@ -61,6 +61,7 @@ RSpec.describe 'Enumerable#minmax' do
 
   it 'raises a NoMethodError for elements not responding to #<=>' do
     enum = EnumerableSpecs::Numerous.new(BasicObject.new, BasicObject.new)
+
     expect {
       enum.minmax
     }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
@@ -68,6 +69,7 @@ RSpec.describe 'Enumerable#minmax' do
 
   it 'raises an ArgumentError when elements are incompatible' do
     enum = EnumerableSpecs::Numerous.new(11, '22')
+
     expect {
       enum.minmax
     }.to raise_error(ArgumentError, 'comparison of Integer with String failed')

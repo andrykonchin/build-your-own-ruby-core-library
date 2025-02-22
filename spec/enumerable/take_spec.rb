@@ -38,7 +38,10 @@ RSpec.describe 'Enumerable#take' do
 
   it 'raises an ArgumentError when count is negative' do
     enum = EnumerableSpecs::Numerous.new
-    expect { enum.take(-1) }.to raise_error(ArgumentError, 'attempt to take negative size')
+
+    expect {
+      enum.take(-1)
+    }.to raise_error(ArgumentError, 'attempt to take negative size')
   end
 
   it 'returns the entire array when n > enum size' do

@@ -74,6 +74,7 @@ RSpec.describe 'Enumerable#find_index' do
 
     it 'ignores block' do
       enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+
       expect {
         expect(enum.find_index(4) { raise }).to eq(3) # rubocop:disable Lint/UnreachableLoop
       }.to complain(/warning: given block not used/)

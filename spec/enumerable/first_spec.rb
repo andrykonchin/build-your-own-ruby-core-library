@@ -52,13 +52,22 @@ RSpec.describe 'Enumerable#first' do
       expect(empty.first(2)).to eq([])
     end
 
+    it 'returns an empty array when n is zero' do
+      enum = EnumerableSpecs::Numerous.new
+      expect(enum.first(0)).to eq([])
+    end
+
     it 'raises an ArgumentError when an argument is negative' do
       enum = EnumerableSpecs::Numerous.new
-      expect { enum.first(-1) }.to raise_error(ArgumentError, 'attempt to take negative size')
+
+      expect {
+        enum.first(-1)
+      }.to raise_error(ArgumentError, 'attempt to take negative size')
     end
 
     it 'raises a RangeError when passed a Bignum' do
-      enum = EnumerableSpecs::Empty.new
+      enum = EnumerableSpecs::Numerous.new
+
       expect {
         enum.first(bignum_value)
       }.to raise_error(RangeError, "bignum too big to convert into 'long'")
@@ -90,6 +99,7 @@ RSpec.describe 'Enumerable#first' do
       it 'raises a TypeError if the passed argument responds to #to_int but it returns non-Integer value' do
         enum = EnumerableSpecs::Numerous.new
         n = double('n', to_int: 'a')
+
         expect {
           enum.first(n)
         }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")

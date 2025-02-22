@@ -87,6 +87,7 @@ RSpec.describe 'Enumerable#chunk' do
 
   it 'does not accept arguments' do
     e = EnumerableSpecs::Numerous.new(1, 2, 3)
+
     expect {
       e.chunk(1) {}
     }.to raise_error(ArgumentError)

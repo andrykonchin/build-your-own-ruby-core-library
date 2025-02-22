@@ -49,6 +49,7 @@ RSpec.describe 'Enumerable#min_by' do
 
   it 'raises a NoMethodError for returned by a block values not responding to #<=>' do
     enum = EnumerableSpecs::Numerous.new
+
     expect {
       enum.min_by { BasicObject.new }
     }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
@@ -56,9 +57,10 @@ RSpec.describe 'Enumerable#min_by' do
 
   it 'raises an ArgumentError for incomparable for returned by a block values' do
     enum = EnumerableSpecs::Numerous.new
-    expect do
+
+    expect {
       enum.min_by { EnumerableSpecs::Uncomparable.new }
-    end.to raise_error(ArgumentError, 'comparison of EnumerableSpecs::Uncomparable with EnumerableSpecs::Uncomparable failed')
+    }.to raise_error(ArgumentError, 'comparison of EnumerableSpecs::Uncomparable with EnumerableSpecs::Uncomparable failed')
   end
 
   context 'when #each yields multiple' do
@@ -104,7 +106,8 @@ RSpec.describe 'Enumerable#min_by' do
     end
 
     it 'raises a RangeError when passed a Bignum' do
-      enum = EnumerableSpecs::Empty.new
+      enum = EnumerableSpecs::Numerous.new
+
       expect {
         enum.min_by(bignum_value) { |n| n }
       }.to raise_error(RangeError, "bignum too big to convert into 'long'")
@@ -119,6 +122,7 @@ RSpec.describe 'Enumerable#min_by' do
 
       it 'raises a TypeError if the passed argument does not respond to #to_int' do
         enum = EnumerableSpecs::Numerous.new
+
         expect {
           enum.min_by('a') { |e| e }
         }.to raise_error(TypeError, 'no implicit conversion of String into Integer')

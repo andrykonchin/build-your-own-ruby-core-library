@@ -40,6 +40,7 @@ RSpec.describe 'Enumerable#sort_by' do
 
   it 'raises a NoMethodError if elements do not respond to <=>' do
     enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+
     expect {
       enum.sort_by { BasicObject.new }
     }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
@@ -47,6 +48,7 @@ RSpec.describe 'Enumerable#sort_by' do
 
   it "raises an error if objects can't be compared, that is <=> returns nil" do
     enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
+
     expect {
       enum.sort_by { EnumerableSpecs::Uncomparable.new }
     }.to raise_error(ArgumentError, 'comparison of EnumerableSpecs::Uncomparable with EnumerableSpecs::Uncomparable failed')

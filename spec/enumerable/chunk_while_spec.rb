@@ -26,7 +26,7 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Enumerable#chunk_while' do
-  context 'when given a block' do
+  context 'given a block' do
     it 'returns an enumerator' do
       enum = EnumerableSpecs::Numerous.new
       expect(enum.chunk_while { |_i, _j| true }).to be_an_instance_of(Enumerator)
@@ -59,21 +59,21 @@ RSpec.describe 'Enumerable#chunk_while' do
     end
   end
 
-  context 'when not given a block' do
+  context 'given no block' do
     it 'raises an ArgumentError' do
       enum = EnumerableSpecs::Numerous.new
       expect { enum.chunk_while }.to raise_error(ArgumentError, 'tried to create Proc object without a block')
     end
   end
 
-  context 'on a single-element enumerable' do
+  context 'single-element enumerable' do
     it 'ignores the block and returns an enumerator that yields [element]' do
       enum = EnumerableSpecs::Numerous.new(1)
       expect(enum.chunk_while { |x| x.even? }.to_a).to eq [[1]]
     end
   end
 
-  context 'on an empty enumerable' do
+  context 'empty enumerable' do
     it 'returns an empty enumerator' do
       enum = EnumerableSpecs::Empty.new
       expect(enum.chunk_while { |x| x.even? }.to_a).to eq []

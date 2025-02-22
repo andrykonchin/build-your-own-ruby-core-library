@@ -43,6 +43,7 @@ RSpec.describe 'Enumerable#min' do
 
   it 'raises a NoMethodError for elements not responding to #<=>' do
     enum = EnumerableSpecs::Numerous.new(BasicObject.new, BasicObject.new)
+
     expect {
       enum.min
     }.to raise_error(NoMethodError, "undefined method '<=>' for an instance of BasicObject")
@@ -50,9 +51,10 @@ RSpec.describe 'Enumerable#min' do
 
   it 'raises an ArgumentError for incomparable elements' do
     enum = EnumerableSpecs::Numerous.new(11, '22')
-    expect do
+
+    expect {
       enum.min
-    end.to raise_error(ArgumentError, 'comparison of String with 11 failed')
+    }.to raise_error(ArgumentError, 'comparison of String with 11 failed')
   end
 
   context 'when called with an argument n' do
@@ -77,7 +79,8 @@ RSpec.describe 'Enumerable#min' do
     end
 
     it 'raises a RangeError when passed a Bignum' do
-      enum = EnumerableSpecs::Empty.new
+      enum = EnumerableSpecs::Numerous.new
+
       expect {
         enum.min(bignum_value)
       }.to raise_error(RangeError, "bignum too big to convert into 'long'")
@@ -106,7 +109,7 @@ RSpec.describe 'Enumerable#min' do
     end
   end
 
-  context 'when given a block' do
+  context 'given a block' do
     it 'compares elements using a block' do
       enum = EnumerableSpecs::Numerous.new(1, 2, 3, 4)
       expect(enum.min { |a, b| b <=> a }).to eq(4)

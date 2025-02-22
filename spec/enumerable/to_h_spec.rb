@@ -69,7 +69,7 @@ RSpec.describe 'Enumerable#to_h' do
     expect { enum.to_h }.to raise_error(ArgumentError, 'element has wrong array length (expected 2, was 3)')
   end
 
-  context 'with block' do
+  context 'given a block' do
     it 'converts [key, value] pairs returned by the block into a Hash' do
       enum = EnumerableSpecs::Numerous.new(:a, :b)
       expect(enum.to_h { |k| [k, k.to_s] }).to eq({ a: 'a', b: 'b' })
@@ -85,21 +85,21 @@ RSpec.describe 'Enumerable#to_h' do
     it 'raises ArgumentError if block returns longer or shorter Array' do
       enum = EnumerableSpecs::Numerous.new
 
-      expect do
+      expect {
         enum.to_h { |k| [k, k, k] }
-      end.to raise_error(ArgumentError, 'element has wrong array length (expected 2, was 3)')
+      }.to raise_error(ArgumentError, 'element has wrong array length (expected 2, was 3)')
 
-      expect do
+      expect {
         enum.to_h { |k| [k] }
-      end.to raise_error(ArgumentError, 'element has wrong array length (expected 2, was 1)')
+      }.to raise_error(ArgumentError, 'element has wrong array length (expected 2, was 1)')
     end
 
     it 'raises TypeError if block returns something other than Array' do
       enum = EnumerableSpecs::Numerous.new
 
-      expect do
+      expect {
         enum.to_h { 'not-array' }
-      end.to raise_error(TypeError, 'wrong element type String (expected array)')
+      }.to raise_error(TypeError, 'wrong element type String (expected array)')
     end
 
     it 'coerces returned pair to Array with #to_ary' do
@@ -113,9 +113,9 @@ RSpec.describe 'Enumerable#to_h' do
       enum = EnumerableSpecs::Numerous.new
       x = double('x', to_a: [:b, 'b'])
 
-      expect do
+      expect {
         enum.to_h { x }
-      end.to raise_error(TypeError, 'wrong element type RSpec::Mocks::Double (expected array)')
+      }.to raise_error(TypeError, 'wrong element type RSpec::Mocks::Double (expected array)')
     end
   end
 end

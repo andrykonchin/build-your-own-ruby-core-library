@@ -111,6 +111,7 @@ RSpec.describe 'Enumerable#each_slice' do
     it 'raises a TypeError if the passed argument responds to #to_int but it returns non-Integer value' do
       enum = EnumerableSpecs::Numerous.new
       n = double('n', to_int: 'a')
+
       expect {
         enum.each_slice(n) {}
       }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to Integer (RSpec::Mocks::Double#to_int gives String)")

@@ -92,6 +92,7 @@ RSpec.describe 'Enumerable#inject' do
     it 'raises TypeError when #to_str method returns non-String value' do
       enum = EnumerableSpecs::Numerous.new
       name = double('name', to_str: [])
+
       expect {
         enum.inject(name)
       }.to raise_error(TypeError, "can't convert RSpec::Mocks::Double to String (RSpec::Mocks::Double#to_str gives Array)")
