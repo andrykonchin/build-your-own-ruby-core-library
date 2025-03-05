@@ -44,19 +44,21 @@ RSpec.describe 'Range#to_s' do
     expect(range.to_s).to eq('0...1')
   end
 
-  # TODO: rename titles
-  it 'works for beginless ranges' do
+  it 'uses "" for the left boundary if beginless range' do
     expect(Range.new(nil, 1).to_s).to eq('..1')
     expect(Range.new(nil, 1, true).to_s).to eq('...1')
   end
 
-  it 'works for endless ranges' do
+  it 'uses "" for the right boundary if endless range' do
     expect(Range.new(1, nil).to_s).to eq('1..')
     expect(Range.new(1, nil, true).to_s).to eq('1...')
   end
 
-  it 'works for nil, nil ranges' do
+  it 'keeps only .. for (nil..nil) ranges' do
     expect(Range.new(nil, nil).to_s).to eq('..')
+  end
+
+  it 'keeps only ... for (nil...nil) ranges' do
     expect(Range.new(nil, nil, true).to_s).to eq('...')
   end
 end

@@ -26,26 +26,26 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range#first' do
-  it 'returns the left boundary' do
+  it 'returns self.begin' do
     a = RangeSpecs::Element.new(0)
     b = RangeSpecs::Element.new(1)
     range = Range.new(a, b)
     expect(range.first).to equal(a)
   end
 
-  it 'returns the left boundary even when self is empty' do
+  it 'returns self.begin even when self is empty' do
     a = RangeSpecs::Element.new(0)
     expect(Range.new(a, a, true).first).to equal(a)
   end
 
-  it 'returns the left boundary even when self is backward' do
+  it 'returns self.begin even when self is backward' do
     a = RangeSpecs::Element.new(0)
     b = RangeSpecs::Element.new(1)
 
     expect(Range.new(b, a).first).to equal(b)
   end
 
-  it 'returns the left boundary when a range is not iterable' do
+  it 'returns self.begin when a range is not iterable' do
     a = RangeSpecs::WithoutSucc.new(0)
     b = RangeSpecs::WithoutSucc.new(1)
     range = Range.new(a, b)
@@ -73,7 +73,7 @@ RSpec.describe 'Range#first' do
       )
     end
 
-    it "doesn't yield the right boundary when end is excluded" do
+    it "doesn't yield self.end when end is excluded" do
       range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
       expect(range.first(4)).to eq(
         [
@@ -110,9 +110,12 @@ RSpec.describe 'Range#first' do
     it 'raises an ArgumentError when an argument is negative' do
       range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(1))
 
+      # The error message "negative array size (or size too big)" is
+      # Array-specific and doesn't match similar error messages in Enumerable.
+      # CRuby creates a temporary Array so it fails first
       expect {
         range.first(-1)
-      }.to raise_error(ArgumentError, 'negative array size (or size too big)')
+      }.to raise_error(ArgumentError, /negative array size \(or size too big\)|attempt to take negative size/)
     end
 
     it 'raises a RangeError when passed a Bignum' do

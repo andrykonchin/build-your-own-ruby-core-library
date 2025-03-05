@@ -37,7 +37,6 @@ module RangeSpecs
     end
   end
 
-  # a range of WithPlus is iteratable by calling #+
   class WithPlus
     attr_reader :value
 
@@ -72,7 +71,7 @@ module RangeSpecs
     end
   end
 
-  # a range of WithPlus is iteratable by calling #succ
+  # a range of WithSucc is iteratable by calling #succ
   class WithSucc
     attr_reader :value
 
@@ -97,6 +96,7 @@ module RangeSpecs
     end
   end
 
+  # a range of WithoutSucc cannot be iterated
   class WithoutSucc
     attr_reader :value
 
@@ -196,6 +196,18 @@ module RangeSpecs
       return nil unless other.is_a?(Number)
 
       @value <=> other.value
+    end
+
+    def +(n)
+      raise "supported Integer only, given #{n}" unless n.is_a?(Integer)
+      Number.new(@value + n)
+    end
+
+    # needed only to compare arrays in specs
+    def ==(other)
+      return false unless other.is_a?(Number)
+
+      @value == other.value
     end
 
     # to prevent type conversion

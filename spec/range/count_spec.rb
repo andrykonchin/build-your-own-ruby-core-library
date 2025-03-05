@@ -93,7 +93,7 @@ RSpec.describe 'Range#count' do
 
       # Don't test endless ranges because #count iterates infinitly
 
-      it 'returns Float::INFINITY for nil..nil' do
+      it 'raises TypeError for nil..nil' do
         range = Range.new(nil, nil)
         object = RangeSpecs::WithSucc.new(4)
 

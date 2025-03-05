@@ -37,6 +37,48 @@ RSpec.describe 'Range#minmax' do
     )
   end
 
+  it 'ignores the right boundary if excluded end' do
+    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10), true)
+
+    expect(range.minmax).to eq(
+      [
+        RangeSpecs::WithSucc.new(4),
+        RangeSpecs::WithSucc.new(9)
+      ]
+    )
+  end
+
+  it 'raises RangeError if beginingless range' do
+    range = described_class.new(nil, RangeSpecs::WithSucc.new(10))
+
+    expect {
+      range.minmax
+    }.to raise_error(RangeError, 'cannot get the minimum of beginless range')
+  end
+
+  it 'raises RangeError if endless range' do
+    range = Range.new(RangeSpecs::WithSucc.new(4), nil)
+
+    expect {
+      range.minmax
+    }.to raise_error(RangeError, 'cannot get the maximum of endless range')
+  end
+
+  it 'returns [nil, nil] if empty range' do
+    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+    expect(range.minmax).to eq([nil, nil])
+  end
+
+  it 'returns [nil, nil] if range is backward' do
+    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(0))
+    expect(range.minmax).to eq([nil, nil])
+  end
+
+  it 'returns [element, element] if range contain only one element' do
+    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0))
+    expect(range.minmax).to eq([RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0)])
+  end
+
   context 'given a block' do
     it 'compares elements using a block' do
       range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10))
@@ -63,47 +105,5 @@ RSpec.describe 'Range#minmax' do
       count = 0
       expect(range.minmax { |a, b| break :aborted if count > 10; count += 1; b <=> a }).to eq(:aborted)
     end
-  end
-
-  it 'ignores the right boundary if excluded end' do
-    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10), true)
-
-    expect(range.minmax).to eq(
-      [
-        RangeSpecs::WithSucc.new(4),
-        RangeSpecs::WithSucc.new(9)
-      ]
-    )
-  end
-
-  it 'returns [nil, nil] if empty range' do
-    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
-    expect(range.minmax).to eq([nil, nil])
-  end
-
-  it 'returns [nil, nil] if range is backward' do
-    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(0))
-    expect(range.minmax).to eq([nil, nil])
-  end
-
-  it 'returns [element, element] if range contain only one element' do
-    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0))
-    expect(range.minmax).to eq([RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0)])
-  end
-
-  it 'raises RangeError if beginingless range' do
-    range = Range.new(nil, RangeSpecs::WithSucc.new(10))
-
-    expect {
-      range.minmax
-    }.to raise_error(RangeError, 'cannot get the minimum of beginless range')
-  end
-
-  it 'raises RangeError if endless range' do
-    range = Range.new(RangeSpecs::WithSucc.new(4), nil)
-
-    expect {
-      range.minmax
-    }.to raise_error(RangeError, 'cannot get the maximum of endless range')
   end
 end

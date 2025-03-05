@@ -49,7 +49,7 @@ RSpec.describe 'Range.new' do
     expect(Range.new(0, 1, false).exclude_end?).to be false
   end
 
-  it "raises an ArgumentError if begin or end doesn't respond to #<=>" do
+  it "raises an ArgumentError if begin or end doesn't respond to #<=> and range is finit" do
     expect {
       Range.new(Object.new, 1)
     }.to raise_error(ArgumentError, 'bad value for range')
@@ -59,7 +59,7 @@ RSpec.describe 'Range.new' do
     }.to raise_error(ArgumentError, 'bad value for range')
   end
 
-  it "raises an ArgumentError if begin and end respond to #<=> but aren't comparable" do
+  it "raises ArgumentError if begin and end respond to #<=> but aren't comparable and range is finit" do
     a = double('begin', '<=>': nil)
     b = double('end', '<=>': nil)
 
@@ -68,13 +68,18 @@ RSpec.describe 'Range.new' do
     }.to raise_error(ArgumentError, 'bad value for range')
   end
 
+  it "doesn't raise ArgumentError if begin or end doesn't respond to #<=> and range is infinit" do
+    expect(Range.new(Object.new, nil)).to be_an_instance_of(described_class)
+    expect(Range.new(nil, Object.new)).to be_an_instance_of(described_class)
+  end
+
   describe 'beginless/endless range' do
-    it 'allows beginless left boundary' do
+    it 'allows beginless begin boundary' do
       range = Range.new(nil, 1)
       expect(range.begin).to be_nil
     end
 
-    it 'allows endless right boundary' do
+    it 'allows endless end boundary' do
       range = Range.new(1, nil)
       expect(range.end).to be_nil
     end

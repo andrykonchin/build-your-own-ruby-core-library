@@ -44,18 +44,21 @@ RSpec.describe 'Range#inspect' do
     expect(range.inspect).to eq('0...1')
   end
 
-  it 'works for beginless ranges' do
+  it 'uses "" for the left boundary if beginless range' do
     expect(Range.new(nil, 1).inspect).to eq('..1')
     expect(Range.new(nil, 1, true).inspect).to eq('...1')
   end
 
-  it 'works for endless ranges' do
+  it 'uses "" for the right boundary if endless range' do
     expect(Range.new(1, nil).inspect).to eq('1..')
     expect(Range.new(1, nil, true).inspect).to eq('1...')
   end
 
-  it 'works for nil, nil ranges' do
+  it 'uses nil for both boundaries for (nil..nil) ranges' do
     expect(Range.new(nil, nil).inspect).to eq('nil..nil')
+  end
+
+  it 'uses nil for both boundaries ... for (nil...nil) ranges' do
     expect(Range.new(nil, nil, true).inspect).to eq('nil...nil')
   end
 end

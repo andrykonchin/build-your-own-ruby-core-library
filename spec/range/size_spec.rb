@@ -37,8 +37,13 @@ RSpec.describe 'Range#size' do
       expect(range.size).to eq(0)
     end
 
+    it 'returns 0 if empty range' do
+      range = Range.new(0, 0, true)
+      expect(range.size).to eq(0)
+    end
+
     it 'returns 0 if infinite backward range' do
-      range = Range.new(16, -Float::INFINITY)
+      range = described_class.new(16, -Float::INFINITY)
       expect(range.size).to eq(0)
     end
 

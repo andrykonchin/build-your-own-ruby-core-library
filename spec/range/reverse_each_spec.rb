@@ -44,7 +44,7 @@ RSpec.describe 'Range#reverse_each' do
     )
   end
 
-  it "doesn't yield the right boundary if end is excluded" do
+  it "doesn't yield self.end if end is excluded" do
     range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
     range.reverse_each { |e| ScratchPad << e }
 
@@ -108,13 +108,13 @@ RSpec.describe 'Range#reverse_each' do
     }.to raise_error(TypeError, "can't iterate from NilClass")
   end
 
-  it 'iterates indefinitely if beginingless range with Numeric self.end' do
+  it 'iterates indefinitely if beginingless range with Integer self.end' do
     range = Range.new(nil, 2)
     range.reverse_each { |e| break if e < 0; ScratchPad << e }
     expect(ScratchPad.recorded).to eq([2, 1, 0])
   end
 
-  it 'raises TypeError if beginingless range with non-Numeric self.end' do
+  it 'raises TypeError if beginingless range with non-Integer self.end' do
     range = Range.new(nil, RangeSpecs::WithSucc.new(4))
 
     expect {

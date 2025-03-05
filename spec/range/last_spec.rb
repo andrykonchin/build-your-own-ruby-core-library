@@ -26,7 +26,7 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range#last' do
-  it 'returns the right boundary' do
+  it 'returns self.end' do
     a = RangeSpecs::Element.new(0)
     b = RangeSpecs::Element.new(1)
 
@@ -34,7 +34,7 @@ RSpec.describe 'Range#last' do
     expect(range.last).to equal(b)
   end
 
-  it 'returns the right boundary even when end is excluded' do
+  it 'returns self.end even when end is excluded' do
     a = RangeSpecs::Element.new(0)
     b = RangeSpecs::Element.new(1)
 
@@ -42,14 +42,14 @@ RSpec.describe 'Range#last' do
     expect(range.last).to equal(b)
   end
 
-  it 'returns the right boundary even when self is empty' do
+  it 'returns self.end even when self is empty' do
     a = RangeSpecs::Element.new(0)
     range = Range.new(a, a, true)
 
     expect(range.last).to equal(a)
   end
 
-  it 'returns the right boundary even when self is backward' do
+  it 'returns self.end even when self is backward' do
     a = RangeSpecs::Element.new(0)
     b = RangeSpecs::Element.new(1)
 
@@ -57,14 +57,14 @@ RSpec.describe 'Range#last' do
     expect(range.last).to equal(a)
   end
 
-  it 'returns the right boundary when beginingless range' do
+  it 'returns self.end when beginingless range' do
     a = RangeSpecs::Element.new(1)
     range = Range.new(nil, a)
 
     expect(range.last).to equal(a)
   end
 
-  it 'returns the right boundary when a range is not iterable' do
+  it 'returns self.end when a range is not iterable' do
     a = RangeSpecs::WithoutSucc.new(0)
     b = RangeSpecs::WithoutSucc.new(1)
 
@@ -93,7 +93,7 @@ RSpec.describe 'Range#last' do
       )
     end
 
-    it "doesn't yield the right boundary when end is excluded" do
+    it "doesn't yield self.end when end is excluded" do
       range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
 
       expect(range.last(4)).to eq(

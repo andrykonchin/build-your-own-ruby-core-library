@@ -44,7 +44,7 @@ RSpec.describe 'Range#each' do
     )
   end
 
-  it "doesn't yield the right boundary if end is excluded" do
+  it "doesn't yield self.end if end is excluded" do
     range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
     range.each { |e| ScratchPad << e }
 

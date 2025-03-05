@@ -26,7 +26,7 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range#max' do
-  it 'returns the right boundary' do
+  it 'returns self.end' do
     range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
     expect(range.max).to eq(RangeSpecs::WithSucc.new(4))
   end
@@ -41,12 +41,12 @@ RSpec.describe 'Range#max' do
     expect(range.max).to be_nil
   end
 
-  it 'returns the right boundary for beginingless range' do
+  it 'returns self.end for beginingless range and non-Numeric self.end' do
     range = Range.new(nil, RangeSpecs::WithSucc.new(4))
     expect(range.max).to eq(RangeSpecs::WithSucc.new(4))
   end
 
-  it 'raises RangeError for beginingless range with excluded end' do
+  it 'raises RangeError for beginingless range with excluded end and non-Numeric self.end' do
     range = Range.new(nil, RangeSpecs::WithSucc.new(4), true)
 
     expect {
@@ -54,25 +54,49 @@ RSpec.describe 'Range#max' do
     }.to raise_error(RangeError, 'cannot get the maximum of beginless range with custom comparison method')
   end
 
-  it 'raises RangeError if endless range' do
-    range = Range.new(RangeSpecs::WithSucc.new(1), nil)
-
-    expect {
-      range.max
-    }.to raise_error(RangeError, 'cannot get the maximum of endless range')
+  it 'returns self.end for beginingless range and Numeric non-Integer self.end' do
+    range = Range.new(nil, RangeSpecs::Number.new(4))
+    expect(range.max).to eq(RangeSpecs::Number.new(4))
   end
 
-  it 'ignores the right boundary if excluded end' do
-    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
-    expect(range.max).to eq(RangeSpecs::WithSucc.new(3))
-  end
-
-  it 'raises TypeError if Numeric range with non-Integer end and excluded end' do
-    range = Range.new(1.0, 4.0, true)
+  it 'raises RangeError for beginingless range with excluded end and Numeric non-Integer self.end' do
+    range = Range.new(nil, RangeSpecs::Number.new(4), true)
 
     expect {
       range.max
     }.to raise_error(TypeError, 'cannot exclude non Integer end value')
+  end
+
+  it 'returns self.end for beginingless range and Integer self.end' do
+    range = Range.new(nil, 4)
+    expect(range.max).to eq(4)
+  end
+
+  # https://bugs.ruby-lang.org/issues/21175
+  it 'raises RangeError for beginingless range with excluded end and Integer self.end' do
+    range = Range.new(nil, 4, true)
+
+    expect {
+      range.max
+    }.to raise_error(TypeError, 'cannot exclude end value with non Integer begin value')
+  end
+
+  it 'ignores the right boundary if excluded end' do
+    range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+    expect(range.max).to eq(RangeSpecs::WithSucc.new(3))
+  end
+
+  it 'raises TypeError if Numeric range with non-Integer self.end and excluded end' do
+    range = described_class.new(RangeSpecs::Number.new(1), RangeSpecs::Number.new(4), true)
+
+    expect {
+      range.max
+    }.to raise_error(TypeError, 'cannot exclude non Integer end value')
+  end
+
+  it 'returns self.end if Integer range and excluded end' do
+    range = Range.new(1, 4, true)
+    expect(range.max).to eq(3)
   end
 
   it 'raises TypeError if Numeric range with non-Integer self.begin, Integer self.end and excluded end' do
@@ -146,6 +170,15 @@ RSpec.describe 'Range#max' do
 
     it 'raises RangeError for beginingless range with excluded end' do
       range = Range.new(nil, RangeSpecs::WithSucc.new(4), true)
+
+      expect {
+        range.max(2)
+      }.to raise_error(RangeError, 'cannot get the maximum of beginless range with custom comparison method')
+    end
+
+    # https://bugs.ruby-lang.org/issues/21174
+    it 'raises RangeError for beginingless range with excluded end and Integer self.end' do
+      range = Range.new(nil, 4, true)
 
       expect {
         range.max(2)
