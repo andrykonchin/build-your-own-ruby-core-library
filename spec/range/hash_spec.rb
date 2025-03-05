@@ -26,14 +26,16 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range#hash' do
+  let(:described_class) { BuildYourOwn::RubyCoreLibrary::Range }
+
   it 'returns an Integer' do
-    range = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(6))
+    range = described_class.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(6))
     expect(range.hash).to be_an_instance_of(Integer)
   end
 
   it 'returns different values for different ranges' do
-    a = Range.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(6))
-    b = Range.new(RangeSpecs::Element.new(-1), RangeSpecs::Element.new(1))
+    a = described_class.new(RangeSpecs::Element.new(0), RangeSpecs::Element.new(6))
+    b = described_class.new(RangeSpecs::Element.new(-1), RangeSpecs::Element.new(1))
     expect(a.hash).not_to eq(b.hash)
   end
 
@@ -41,8 +43,8 @@ RSpec.describe 'Range#hash' do
     from = RangeSpecs::Element.new(0)
     to = RangeSpecs::Element.new(6)
 
-    a = Range.new(from, to)
-    b = Range.new(from, to)
+    a = described_class.new(from, to)
+    b = described_class.new(from, to)
 
     expect(a.hash).to eq(b.hash)
   end

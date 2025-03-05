@@ -26,16 +26,18 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range#begin' do
+  let(:described_class) { BuildYourOwn::RubyCoreLibrary::Range }
+
   it 'returns the object that defines the beginning of a range' do
     a = RangeSpecs::Element.new(0)
     b = RangeSpecs::Element.new(1)
-    range = Range.new(a, b)
+    range = described_class.new(a, b)
     expect(range.begin).to equal(a)
   end
 
   it 'returns nil for a beginningless range' do
     a = RangeSpecs::Element.new(0)
-    range = Range.new(nil, a)
+    range = described_class.new(nil, a)
     expect(range.begin).to be_nil
   end
 end

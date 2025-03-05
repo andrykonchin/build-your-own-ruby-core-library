@@ -26,7 +26,9 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range' do
+  let(:described_class) { BuildYourOwn::RubyCoreLibrary::Range }
+
   it 'includes Enumerable' do
-    expect(Range.include?(Enumerable)).to be(true)
+    expect(described_class.include?(Enumerable)).to be(true)
   end
 end

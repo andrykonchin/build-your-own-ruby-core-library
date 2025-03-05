@@ -26,23 +26,25 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range#min' do
+  let(:described_class) { BuildYourOwn::RubyCoreLibrary::Range }
+
   it 'returns self.begin' do
-    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
     expect(range.min).to eq(RangeSpecs::WithSucc.new(1))
   end
 
   it 'returns nil for empty range' do
-    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+    range = described_class.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
     expect(range.min).to be_nil
   end
 
   it 'returns nil for backward range' do
-    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+    range = described_class.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
     expect(range.min).to be_nil
   end
 
   it 'raises RangeError if beginingless range' do
-    range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+    range = described_class.new(nil, RangeSpecs::WithSucc.new(4))
 
     expect {
       range.min
@@ -51,7 +53,7 @@ RSpec.describe 'Range#min' do
 
   context 'given an argument n' do
     it 'returns an array containing n leftmost elements' do
-      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+      range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
       expect(range.min(2)).to contain_exactly(
         RangeSpecs::WithSucc.new(1),
@@ -60,7 +62,7 @@ RSpec.describe 'Range#min' do
     end
 
     it 'allows an argument n be greater than elements number' do
-      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+      range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
       expect(range.min(10)).to contain_exactly(
         RangeSpecs::WithSucc.new(1),
@@ -71,7 +73,7 @@ RSpec.describe 'Range#min' do
     end
 
     it 'ignores the right boundary if excluded end' do
-      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+      range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
 
       expect(range.min(4)).to contain_exactly(
         RangeSpecs::WithSucc.new(1),
@@ -81,7 +83,7 @@ RSpec.describe 'Range#min' do
     end
 
     it 'raises an ArgumentError when n is negative' do
-      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+      range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
       # The error message "negative array size (or size too big)" is
       # Array-specific and doesn't match similar error messages in Enumerable.
@@ -92,7 +94,7 @@ RSpec.describe 'Range#min' do
     end
 
     it 'raises a RangeError when passed a Bignum' do
-      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+      range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
       expect {
         range.min(bignum_value)
@@ -100,17 +102,17 @@ RSpec.describe 'Range#min' do
     end
 
     it 'returns [] for empty range' do
-      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+      range = described_class.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
       expect(range.min(2)).to eq([])
     end
 
     it 'returns [] for backward range' do
-      range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+      range = described_class.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
       expect(range.min(2)).to eq([])
     end
 
     it 'raises RangeError if beginingless range' do
-      range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+      range = described_class.new(nil, RangeSpecs::WithSucc.new(4))
 
       expect {
         range.min(2)
@@ -119,7 +121,7 @@ RSpec.describe 'Range#min' do
 
     describe 'argument conversion to Integer' do
       it 'converts the passed argument to an Integer using #to_int' do
-        range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+        range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
         n = double('n', to_int: 2)
 
         expect(range.min(n)).to contain_exactly(
@@ -129,12 +131,12 @@ RSpec.describe 'Range#min' do
       end
 
       it 'raises a TypeError if the passed argument does not respond to #to_int' do
-        range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+        range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
         expect { range.min('a') }.to raise_error(TypeError, 'no implicit conversion of String into Integer')
       end
 
       it 'raises a TypeError if the passed argument responds to #to_int but it returns non-Integer value' do
-        range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+        range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
         n = double('n', to_int: 'a')
 
         expect {
@@ -146,12 +148,12 @@ RSpec.describe 'Range#min' do
 
   context 'given a block' do
     it 'compares elements using a block' do
-      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+      range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
       expect(range.min { |a, b| a <=> b }).to eq(RangeSpecs::WithSucc.new(1))
     end
 
     it 'returns an array containing the minimum n elements' do
-      range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+      range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
 
       expect(range.min(2) { |a, b| a <=> b }).to contain_exactly(
         RangeSpecs::WithSucc.new(1),
@@ -160,17 +162,17 @@ RSpec.describe 'Range#min' do
     end
 
     it 'returns nil for empty range' do
-      range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+      range = described_class.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
       expect(range.min { |a, b| a <=> b }).to be_nil
     end
 
     it 'returns nil for backward range' do
-      range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
+      range = described_class.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(1))
       expect(range.min { |a, b| a <=> b }).to be_nil
     end
 
     it 'raises RangeError if beginingless range' do
-      range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+      range = described_class.new(nil, RangeSpecs::WithSucc.new(4))
 
       expect {
         range.min { |a, b| a <=> b }
@@ -178,7 +180,7 @@ RSpec.describe 'Range#min' do
     end
 
     it 'raises RangeError if endless range' do
-      range = Range.new(RangeSpecs::WithSucc.new(1), nil)
+      range = described_class.new(RangeSpecs::WithSucc.new(1), nil)
 
       expect {
         range.min { |a, b| a <=> b }

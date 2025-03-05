@@ -26,8 +26,10 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range#minmax' do
+  let(:described_class) { BuildYourOwn::RubyCoreLibrary::Range }
+
   it 'returns a 2-element array containing the minimum and the maximum elements using #<=> for comparison' do
-    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10))
+    range = described_class.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10))
 
     expect(range.minmax).to eq(
       [
@@ -38,7 +40,7 @@ RSpec.describe 'Range#minmax' do
   end
 
   it 'ignores the right boundary if excluded end' do
-    range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10), true)
+    range = described_class.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10), true)
 
     expect(range.minmax).to eq(
       [
@@ -49,7 +51,7 @@ RSpec.describe 'Range#minmax' do
   end
 
   it 'raises RangeError if beginingless range' do
-    range = Range.new(nil, RangeSpecs::WithSucc.new(10))
+    range = described_class.new(nil, RangeSpecs::WithSucc.new(10))
 
     expect {
       range.minmax
@@ -57,7 +59,7 @@ RSpec.describe 'Range#minmax' do
   end
 
   it 'raises RangeError if endless range' do
-    range = Range.new(RangeSpecs::WithSucc.new(4), nil)
+    range = described_class.new(RangeSpecs::WithSucc.new(4), nil)
 
     expect {
       range.minmax
@@ -65,23 +67,23 @@ RSpec.describe 'Range#minmax' do
   end
 
   it 'returns [nil, nil] if empty range' do
-    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
+    range = described_class.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0), true)
     expect(range.minmax).to eq([nil, nil])
   end
 
   it 'returns [nil, nil] if range is backward' do
-    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(0))
+    range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(0))
     expect(range.minmax).to eq([nil, nil])
   end
 
   it 'returns [element, element] if range contain only one element' do
-    range = Range.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0))
+    range = described_class.new(RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0))
     expect(range.minmax).to eq([RangeSpecs::WithSucc.new(0), RangeSpecs::WithSucc.new(0)])
   end
 
   context 'given a block' do
     it 'compares elements using a block' do
-      range = Range.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10))
+      range = described_class.new(RangeSpecs::WithSucc.new(4), RangeSpecs::WithSucc.new(10))
 
       expect(range.minmax { |a, b| b <=> a }).to eq(
         [
@@ -92,7 +94,7 @@ RSpec.describe 'Range#minmax' do
     end
 
     it 'raises TypeError if beginingless range' do
-      range = Range.new(nil, RangeSpecs::WithSucc.new(10))
+      range = described_class.new(nil, RangeSpecs::WithSucc.new(10))
 
       expect {
         range.minmax { |a, b| b <=> a }
@@ -100,7 +102,7 @@ RSpec.describe 'Range#minmax' do
     end
 
     it 'iterates indefinitly if endless range' do
-      range = Range.new(RangeSpecs::WithSucc.new(4), nil)
+      range = described_class.new(RangeSpecs::WithSucc.new(4), nil)
 
       count = 0
       expect(range.minmax { |a, b| break :aborted if count > 10; count += 1; b <=> a }).to eq(:aborted)
