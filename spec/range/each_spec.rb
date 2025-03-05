@@ -26,12 +26,14 @@ require 'spec_helper'
 require_relative 'fixtures/classes'
 
 RSpec.describe 'Range#each' do
+  let(:described_class) { BuildYourOwn::RubyCoreLibrary::Range }
+
   before do
     ScratchPad.record []
   end
 
   it 'passes each element of self to the block' do
-    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
     range.each { |e| ScratchPad << e }
 
     expect(ScratchPad.recorded).to eq(
@@ -45,7 +47,7 @@ RSpec.describe 'Range#each' do
   end
 
   it "doesn't yield self.end if end is excluded" do
-    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
+    range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4), true)
     range.each { |e| ScratchPad << e }
 
     expect(ScratchPad.recorded).to eq(
@@ -58,7 +60,7 @@ RSpec.describe 'Range#each' do
   end
 
   it 'returns an Enumerator if no block given' do
-    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
     e = range.each
 
     expect(e).to be_an_instance_of(Enumerator)
@@ -73,12 +75,12 @@ RSpec.describe 'Range#each' do
   end
 
   it 'returns self if block given' do
-    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
     expect(range.each {}).to equal(range)
   end
 
   it 'iterates calling #succ on current element to get the next one' do
-    range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+    range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
     range.each { |e| ScratchPad << e }
 
     expect(ScratchPad.recorded).to eq(
@@ -92,19 +94,19 @@ RSpec.describe 'Range#each' do
   end
 
   it "raises TypeError if a range is not iterable (that's some element doesn't respond to #succ)" do
-    range = Range.new(RangeSpecs::WithoutSucc.new(1), RangeSpecs::WithoutSucc.new(4))
+    range = described_class.new(RangeSpecs::WithoutSucc.new(1), RangeSpecs::WithoutSucc.new(4))
     expect {
       range.each {}
     }.to raise_error(TypeError, "can't iterate from RangeSpecs::WithoutSucc")
 
-    range = Range.new(nil, RangeSpecs::WithSucc.new(4))
+    range = described_class.new(nil, RangeSpecs::WithSucc.new(4))
     expect {
       range.each {}
     }.to raise_error(TypeError, "can't iterate from NilClass")
   end
 
   it 'works with endless ranges' do
-    range = Range.new(RangeSpecs::WithSucc.new(-2), nil)
+    range = described_class.new(RangeSpecs::WithSucc.new(-2), nil)
     range.each { |e| break if e.value > 2; ScratchPad << e }
 
     expect(ScratchPad.recorded).to eq(
@@ -122,18 +124,18 @@ RSpec.describe 'Range#each' do
     describe 'when no block is given' do
       describe 'returned Enumerator' do
         it 'size returns the range size when Numeric range' do
-          range = Range.new(1, 4)
+          range = described_class.new(1, 4)
           expect(range.each.size).to eq(range.size)
 
-          range = Range.new(4, 1)
+          range = described_class.new(4, 1)
           expect(range.each.size).to eq(range.size)
 
-          range = Range.new(1, Float::INFINITY)
+          range = described_class.new(1, Float::INFINITY)
           expect(range.each.size).to eq(range.size)
         end
 
         it "raises TypeError if a range is not iterable (that's some element doesn't respond to #succ)" do
-          range = Range.new(RangeSpecs::WithoutSucc.new(1), RangeSpecs::WithoutSucc.new(4))
+          range = described_class.new(RangeSpecs::WithoutSucc.new(1), RangeSpecs::WithoutSucc.new(4))
 
           expect {
             range.each.size
@@ -141,7 +143,7 @@ RSpec.describe 'Range#each' do
         end
 
         it 'size returns the range size when non-Numeric range' do
-          range = Range.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
+          range = described_class.new(RangeSpecs::WithSucc.new(1), RangeSpecs::WithSucc.new(4))
           expect(range.each.size).to eq(range.size)
         end
       end
@@ -152,10 +154,10 @@ RSpec.describe 'Range#each' do
     describe 'when no block is given' do
       describe 'returned Enumerator' do
         it 'size returns range size' do
-          range = Range.new(1, nil)
+          range = described_class.new(1, nil)
           expect(range.each.size).to eq(range.size)
 
-          range = Range.new(RangeSpecs::WithSucc.new(1), nil)
+          range = described_class.new(RangeSpecs::WithSucc.new(1), nil)
           expect(range.each.size).to eq(range.size)
         end
       end
