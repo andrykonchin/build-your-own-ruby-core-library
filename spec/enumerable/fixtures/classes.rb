@@ -21,8 +21,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-require 'build_your_own/ruby_core_library/enumerable'
-
 module EnumerableSpecs
   class Numerous
     include BuildYourOwn::RubyCoreLibrary::Enumerable

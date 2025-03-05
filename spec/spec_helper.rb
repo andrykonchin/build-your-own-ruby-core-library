@@ -14,6 +14,10 @@
 #
 # See https://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 
+Dir['./lib/build_your_own/ruby_core_library/*.rb'].each do |path|
+  require path
+end
+
 Dir['./spec/support/**/*.rb'].each do |path|
   require path
 end

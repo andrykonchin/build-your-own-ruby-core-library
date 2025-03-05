@@ -27,7 +27,7 @@
 require 'stringio'
 
 module BuildYourOwn
-  module RubyCoreLirary
+  module RubyCoreLibrary
     module RSpec
       module Matchers
         # Provides the implementation for `complain`.
@@ -127,7 +127,7 @@ end
 module RSpec
   module Matchers
     def complain(message = nil, **)
-      BuildYourOwn::RubyCoreLirary::RSpec::Matchers::Complain.new(message, **)
+      BuildYourOwn::RubyCoreLibrary::RSpec::Matchers::Complain.new(message, **)
     end
   end
 end
