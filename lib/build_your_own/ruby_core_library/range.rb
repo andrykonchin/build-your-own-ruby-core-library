@@ -2,6 +2,21 @@ module BuildYourOwn
   module RubyCoreLibrary
     # Documentation from the Ruby Project
     class Range
+      include ::Enumerable
+
+      UNDEFINED = Object.new
+      private_constant :UNDEFINED
+
+      #LONG_MAX = 2_147_483_647 # 2^31 - 1
+      #private_constant :LONG_MAX
+
+      # smallest positive native double
+      DBL_EPSILON = 2.2204460492503131e-16
+      private_constant :DBL_EPSILON
+
+      Pair = Data.define(:left, :right)
+      private_constant :Pair
+
       #  call-seq:
       #    %(n) {|element| ... } -> self
       #    %(n)                  -> enumerator or arithmetic_sequence
@@ -22,7 +37,8 @@ module BuildYourOwn
       #
       #      (0..7) % 2 #=> ((0..7).%(2)) -- as expected
       #      0..7 % 2 #=> 0..1 -- parsed as 0..(7 % 2)
-      def %
+      def %(s, &)
+        step(s, &)
       end
 
       #  call-seq:
@@ -52,7 +68,9 @@ module BuildYourOwn
       #    (1..2).eql? (1..2.0) # => false
       #
       #  Related: Range#eql?.
-      def ==
+      def ==(other)
+        return false unless other.is_a?(Range)
+        @begin == other.begin && @end == other.end && @exclude_end == other.exclude_end?
       end
 
       #  call-seq:
@@ -68,7 +86,20 @@ module BuildYourOwn
       #    (1...4) === 4      # => false
       #    ('a'..'d') === 'c' # => true
       #    ('a'..'d') === 'e' # => false
-      def ===
+      def ===(object)
+        unless @begin.nil?
+          determinator = @begin <=> object
+          return false if determinator.nil? || determinator > 0 # begin > object
+        end
+
+        unless @end.nil?
+          determinator = object <=> @end
+          return false if determinator.nil?
+          return false if @exclude_end && determinator >= 0 # object >= end
+          return false if !@exclude_end && determinator > 0 # object > end
+        end
+
+        true
       end
 
       #  call-seq:
@@ -81,6 +112,7 @@ module BuildYourOwn
       #
       #  Related: Range#first, Range#end.
       def begin
+        @begin
       end
 
       #  call-seq:
@@ -221,7 +253,18 @@ module BuildYourOwn
       #    (1..4).count {|element| element < 3 } # => 2
       #
       #  Related: Range#size.
-      def count
+      def count(object = UNDEFINED, &)
+        if (@begin.nil? || @end.nil?) && object == UNDEFINED && !block_given?
+          return Float::INFINITY
+        end
+
+        if object != UNDEFINED
+          super(object, &)
+        elsif block_given?
+          super(&)
+        else
+          super()
+        end
       end
 
       #  call-seq:
@@ -364,6 +407,32 @@ module BuildYourOwn
       #
       #  With no block given, returns an enumerator.
       def each
+        return to_enum(:each) { size } unless block_given?
+
+        unless @begin.respond_to?(:succ)
+          raise TypeError, "can't iterate from #{@begin.class}"
+        end
+
+        e = @begin
+
+        if @end.nil?
+          while true
+            yield e
+            e = e.succ
+          end
+        elsif @exclude_end
+          while compare(e, @end) < 0 # that's e < @end
+            yield e
+            e = e.succ
+          end
+        else
+          while compare(e, @end) <= 0 # that's e <= @end
+            yield e
+            e = e.succ
+          end
+        end
+
+        self
       end
 
       #  call-seq:
@@ -377,6 +446,7 @@ module BuildYourOwn
       #
       #  Related: Range#begin, Range#last.
       def end
+        @end
       end
 
       #  call-seq:
@@ -419,6 +489,7 @@ module BuildYourOwn
       #    (2..5).exclude_end?                # => false
       #    (2...5).exclude_end?               # => true
       def exclude_end?
+        @exclude_end
       end
 
       #  call-seq:
@@ -440,7 +511,16 @@ module BuildYourOwn
       #  Raises an exception if there is no first element:
       #
       #    (..4).first # Raises RangeError
-      def first
+      def first(n = UNDEFINED)
+        if @begin.nil?
+          raise RangeError, "cannot get the first element of beginless range"
+        end
+
+        if n == UNDEFINED
+          @begin
+        else
+          take(n)
+        end
       end
 
       # call-seq:
@@ -452,6 +532,7 @@ module BuildYourOwn
       #
       # Related: Range#eql?, Object#hash.
       def hash
+        @exclude_end.hash + @begin.hash + @end.hash
       end
 
       #  call-seq:
@@ -494,7 +575,18 @@ module BuildYourOwn
       #    Range.new(2, 5, true).to_a      # => [2, 3, 4]
       #    Range.new('a', 'd').to_a        # => ["a", "b", "c", "d"]
       #    Range.new('a', 'd', true).to_a  # => ["a", "b", "c"]
-      def initialize
+      def initialize(from, to, exclude_end = false)
+        @begin = from
+        @end = to
+        @exclude_end = !!exclude_end
+
+        unless from.nil? || to.nil? || (from.respond_to?(:<=>) && from <=> to)
+          raise ArgumentError, 'bad value for range'
+        end
+
+        if self.instance_of?(Range)
+          freeze
+        end
       end
 
       # call-seq:
@@ -515,6 +607,16 @@ module BuildYourOwn
       #
       # Related: Range#to_s.
       def inspect
+        if @begin.nil? && @end.nil?
+          suffix = @exclude_end ? "..." : ".."
+          return "nil#{suffix}nil"
+        end
+
+        begin_as_string = @begin ? @begin.inspect : ""
+        end_as_string = @end ? @end.inspect : ""
+        suffix = @exclude_end ? "..." : ".."
+
+        begin_as_string + suffix + end_as_string
       end
 
       #  call-seq:
@@ -548,7 +650,16 @@ module BuildYourOwn
       #  Raises an exception if there is no last element:
       #
       #    (1..).last # Raises RangeError
-      def last
+      def last(n = UNDEFINED)
+        if @end.nil?
+          raise RangeError, "cannot get the last element of endless range"
+        end
+
+        if n == UNDEFINED
+          @end
+        else
+          to_a.last(n)
+        end
       end
 
       #  call-seq:
@@ -628,7 +739,47 @@ module BuildYourOwn
       #  - A block is given and +self+ is a beginless range.
       #
       #  Related: Range#min, Range#minmax.
-      def max
+      def max(n = UNDEFINED, &)
+        if @end.nil?
+          raise RangeError, 'cannot get the maximum of endless range'
+        end
+
+        # a complex case - it's needed to iterate a range
+        if n != UNDEFINED || block_given? || (@exclude_end && !@end.is_a?(Numeric))
+          if @begin.nil?
+            raise RangeError, 'cannot get the maximum of beginless range with custom comparison method'
+          end
+
+          if n != UNDEFINED
+            return super(n)
+          else
+            return super(&)
+          end
+        end
+
+        # a simple case
+
+        # backward or empty range
+        if @exclude_end
+          return nil if !@begin.nil? && (@begin <=> @end) >= 0 # begin >= end
+        else
+          return nil if !@begin.nil? && (@begin <=> @end) > 0 # begin > end
+        end
+
+        if @exclude_end && !@end.is_a?(Integer)
+          raise TypeError, 'cannot exclude non Integer end value'
+        end
+
+        if @exclude_end && !@begin.is_a?(Integer)
+          raise TypeError, 'cannot exclude end value with non Integer begin value'
+        end
+
+        if @exclude_end
+          # expect @end to be Integer
+          @end - 1
+        else
+          @end
+        end
       end
 
       #  call-seq:
@@ -708,7 +859,32 @@ module BuildYourOwn
       #  - A block is given and +self+ is an endless range.
       #
       #  Related: Range#max, Range#minmax.
-      def min
+      def min(n = UNDEFINED, &)
+        if @begin.nil?
+          raise RangeError, "cannot get the minimum of beginless range"
+        end
+
+        if @end.nil? && block_given?
+          raise RangeError, 'cannot get the minimum of endless range with custom comparison method'
+        end
+
+        if n != UNDEFINED || block_given?
+          # a complex case
+          if n == UNDEFINED
+            super(&)
+          else
+            super
+          end
+        else
+          # a simple one
+          if @exclude_end
+            return nil if !@end.nil? && (@begin <=> @end) >= 0
+          else
+            return nil if !@end.nil? && (@begin <=> @end) > 0
+          end
+
+          @begin
+        end
       end
 
       #  call-seq:
@@ -754,6 +930,17 @@ module BuildYourOwn
       #
       #  Related: Range#min, Range#max.
       def minmax
+        unless block_given?
+          if @begin.nil?
+            raise RangeError, 'cannot get the minimum of beginless range'
+          end
+
+          if @end.nil?
+            raise RangeError, 'cannot get the maximum of endless range'
+          end
+        end
+
+        super
       end
 
       #  call-seq:
@@ -840,6 +1027,39 @@ module BuildYourOwn
       #
       #  With no block given, returns an enumerator.
       def reverse_each
+        unless block_given?
+          return to_enum(:reverse_each) do
+            if @end.nil?
+              raise TypeError, "can't iterate from NilClass"
+            end
+
+            if @begin.nil?
+              if @end.is_a?(Numeric)
+                Float::INFINITY
+              else
+                raise TypeError, "can't iterate from #{@end.class}"
+              end
+            else
+              size
+            end
+          end
+        end
+
+        if @end.nil?
+          raise TypeError, "can't iterate from NilClass"
+        end
+
+        if @begin.nil? && @end.is_a?(Integer)
+          n = @end
+          n -= 1 if @exclude_end
+
+          while true
+            yield n
+            n -= 1
+          end
+        end
+
+        super
       end
 
       #  call-seq:
@@ -861,6 +1081,29 @@ module BuildYourOwn
       #
       #  Related: Range#count.
       def size
+        unless @begin.respond_to?(:succ)
+          raise TypeError, "can't iterate from #{@begin.class}"
+        end
+
+        # non-Integer range
+        unless @begin.is_a?(Integer)
+          return nil
+        end
+
+        # Integer range
+        if @end == Float::INFINITY
+          Float::INFINITY
+        elsif @end.nil?
+          Float::INFINITY
+        elsif @begin > @end
+          0
+        else
+          if @exclude_end
+            @end.to_i - @begin
+          else
+            @end.to_i - @begin + 1
+          end
+        end
       end
 
       #  call-seq:
@@ -938,7 +1181,212 @@ module BuildYourOwn
       #    # Prints: a, c, e
       #    ('a'..'e').step { p _1 }
       #    # Default step 1; prints: a, b, c, d, e
-      def step
+      def step(s = UNDEFINED)
+        if @begin.is_a?(Numeric) && s == 0
+          raise ArgumentError, "step can't be 0"
+        end
+
+        unless block_given?
+          if @begin.nil? && !(@end.is_a?(Numeric) && (s == UNDEFINED || s.is_a?(Numeric)))
+            raise ArgumentError, '#step for non-numeric beginless ranges is meaningless'
+          end
+
+          return to_enum(:step, s) do
+            unless ((@begin.is_a?(Numeric) && (@end.nil? || @end.is_a?(Numeric))) || (@begin.nil? && @end.is_a?(Numeric))) && (s == UNDEFINED || s.is_a?(Numeric))
+              # generic case
+              nil
+            else
+              # Numeric range and Numeric step
+
+              if @begin.nil?
+                raise TypeError, "nil can't be coerced into Integer"
+              end
+
+              if @end.nil?
+                Float::INFINITY
+              elsif (@begin <= @end && (s == UNDEFINED || s > 0)) || (@begin > @end && (s != UNDEFINED && s < 0))
+                numerator = (@end - @begin).abs
+                denominator = (s == UNDEFINED ? 1 : s.abs)
+
+                size = numerator/denominator + 1
+
+                if @exclude_end && (numerator % denominator <= DBL_EPSILON) # numerator % denominator == 0
+                  size -= 1
+                end
+
+                size
+              else
+                0
+              end
+            end
+          end
+        end
+
+        if @begin.nil?
+          raise ArgumentError, '#step iteration for beginless ranges is meaningless'
+        end
+
+        begin_as_string = to_string(@begin)
+        if s == UNDEFINED && !@begin.is_a?(Numeric) && begin_as_string.nil? && !@begin.is_a?(Symbol)
+          raise ArgumentError, 'step is required for non-numeric ranges'
+        end
+
+        # String range
+
+        if !begin_as_string.nil? && (s.is_a?(Integer) || s == UNDEFINED)
+          # backward range
+          end_determinator = @exclude_end ? 0 : 1
+          if !@end.nil? && (begin_as_string <=> @end) >= end_determinator # begin > end
+            return self
+          end
+
+          if s == UNDEFINED
+            s = 1
+          end
+
+          if s <= 0
+            yield begin_as_string
+            return self
+          end
+
+          if @exclude_end
+            current = begin_as_string
+            while @end.nil? || current < @end
+              yield current
+              s.times { current = current.succ }
+            end
+          else
+            current = begin_as_string
+            while @end.nil? || current <= @end
+              yield current
+              s.times { current = current.succ }
+            end
+          end
+
+          return self
+        end
+
+        # Symbol range
+
+        if @begin.is_a?(Symbol) && (s.is_a?(Integer) || s == UNDEFINED)
+          # backward range
+          end_determinator = @exclude_end ? 0 : 1
+          if !@end.nil? && (@begin <=> @end) >= end_determinator # begin > end
+            return self
+          end
+
+          if s == UNDEFINED
+            s = 1
+          end
+
+          if s <= 0
+            yield @begin
+            return self
+          end
+
+          if @exclude_end
+            current = @begin
+            while @end.nil? || current < @end
+              yield current
+              s.times { current = current.succ }
+            end
+          else
+            current = @begin
+            while @end.nil? || current <= @end
+              yield current
+              s.times { current = current.succ }
+            end
+          end
+
+          return self
+        end
+
+        if @begin.is_a?(Numeric) && s == UNDEFINED
+          s = 1
+        end
+
+        # check that the step moves iteration in the same direction as
+        # from begin to end; otherwise, the iteration should be empty
+        if !@end.nil? && @begin != -Float::INFINITY && (@begin <=> @end) != (@begin <=> (@begin + s))
+          return self
+        end
+
+        # Numeric backward range with Numeric step
+
+        if @begin.is_a?(Numeric) && s.is_a?(Numeric) && s < 0
+          end_determinator = @exclude_end ? 0 : -1
+          current = @begin
+
+          while @end.nil? || (current <=> @end) > end_determinator
+            yield current
+            current += s
+          end
+
+          return self
+        end
+
+        # Float range or Numeric range with Float step
+
+        if @begin.is_a?(Numeric) && s.is_a?(Numeric) && (@begin.is_a?(Float) || (@end.is_a?(Float) || s.is_a?(Float)))
+          if @end.nil? || (@begin <=> @end) <= 0
+            # forward range
+            end_determinator = @exclude_end ? 0 : 1
+
+            n = 0
+            current = @begin
+            while @end.nil? || (current <=> @end) < end_determinator
+              yield current.to_f
+
+              n += 1
+              current = @begin + n * s
+            end
+          else
+            # backward range
+            end_determinator = @exclude_end ? 0 : -1
+
+            n = 0
+            current = @begin
+            while (current <=> @end) > end_determinator
+              yield current.to_f
+
+              n += 1
+              current = @begin + n * s
+            end
+          end
+
+          return self
+        end
+
+        # generic case
+
+        current = @begin
+        if @end.nil? || (@begin <=> @end) <= 0
+          # forward range
+
+          # termination condition:
+          # - current >= end (when exclude end)
+          # - current > end (when not exclude end)
+          end_determinator = @exclude_end ? 0 : 1
+
+          while @end.nil? || (current <=> @end) < end_determinator
+            yield current
+            current += s
+          end
+        else
+          # backward range
+
+          # termination condition:
+          # - current <= end (when exclude end)
+          # - current < end (when not exclude end)
+          end_determinator = @exclude_end ? 0 : -1
+
+          while (current <=> @end) > end_determinator
+            yield current
+            current += s
+          end
+        end
+
+        self
       end
 
       #  call-seq:
@@ -951,6 +1399,11 @@ module BuildYourOwn
       #    (1...4).to_a    # => [1, 2, 3]
       #    ('a'..'d').to_a # => ["a", "b", "c", "d"]
       def to_a
+        if @end.nil?
+          raise RangeError, "cannot convert endless range to an array"
+        end
+
+        super
       end
 
       # call-seq:
@@ -971,11 +1424,48 @@ module BuildYourOwn
       #
       # Related: Range#inspect.
       def to_s
+        begin_as_string = @begin ? @begin.to_s : ""
+        end_as_string = @end ? @end.to_s : ""
+        suffix = @exclude_end ? "..." : ".."
+
+        begin_as_string + suffix + end_as_string
       end
 
       private
 
-      def initialize_copy
+      def compare(a, b)
+        determinator = block_given? ? yield(a, b) : a <=> b
+
+        if determinator.nil?
+          # MRI: rb_cmperr
+          b_string = if b == true || b == false || b.nil? || b.is_a?(Integer) || b.is_a?(Float)
+                       b.inspect
+                     else
+                       b.class.name
+                     end
+
+          raise ArgumentError, "comparison of #{a.class} with #{b_string} failed"
+        end
+
+        determinator
+      end
+
+      # MRI: rb_check_string_type
+      def to_string(object)
+        return object if object.is_a? String
+        return nil    if object.nil?
+        return nil    unless object.respond_to? :to_str
+
+        as_string = object.to_str
+        if as_string.nil?
+          return nil
+        end
+
+        unless as_string.is_a? String
+          raise TypeError, "can't convert #{object.class} to String (#{object.class}#to_str gives #{as_string.class})"
+        end
+
+        as_string
       end
     end
   end
