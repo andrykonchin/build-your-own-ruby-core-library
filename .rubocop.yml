@@ -33,7 +33,20 @@ Style/ExplicitBlockArgument:
 Style/FrozenStringLiteralComment:
   Enabled: false
 
+Style/GuardClause:
+  Enabled: false
+
+Style/IfInsideElse:
+  Enabled: false
+
+# I personaly avoid modifiers unless it's a really a short line and it remains readable
+Style/IfUnlessModifier:
+  Enabled: false
+
 Style/MapIntoArray:
+  Enabled: false
+
+Style/NumericPredicate:
   Enabled: false
 
 Style/OperatorMethodCall: # it's just broken for `range.%(2)`
@@ -69,13 +82,28 @@ Layout/MultilineBlockLayout:
 
 # Metrics
 
+Metrics/AbcSize:
+  Enabled: false
+
 Metrics/BlockLength:
+  Enabled: false
+
+Metrics/BlockNesting:
+  Enabled: false
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
   Enabled: false
 
 Metrics/MethodLength:
   Enabled: false
 
 Metrics/ModuleLength:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
   Enabled: false
 
 
