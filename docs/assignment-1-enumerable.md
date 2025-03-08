@@ -118,11 +118,11 @@ it - they return Enumerator instead of raising an exception:
 # => #<Enumerator: ...>
 ```
 
-It's important to note that such an enumerator iterates over a collection
+It's important to note that such an enumerator iterates a collection
 of values that will be passed as arguments to a block, if it would be
 specified. For instance the `#each_cons` and `#each_slice` methods
 produce a sequence of arrays and pass them one by one to a block. When a
-block is not given a returned enumerator iterates over this sequence of
+block is not given a returned enumerator iterates this sequence of
 arrays:
 
 ```ruby
@@ -133,7 +133,7 @@ enum.each { |slice| p slice }
 ```
 
 One can say that it is a useless feature, but actually it allows to
-materialize a way to iterate over a result collection. So this `enum`
+materialize a way to iterate a result collection. So this `enum`
 can be passed somewhere else and will be treated as an ordinary
 collection like `Array`. And it adds laziness.
 
@@ -158,7 +158,7 @@ documented well. There is at least one method `#<<` and its alias
 
 Or it can be created with helper methods Object#to_enum and
 Object#enum_for. When they are called on a collection they create a new
-Enumerator that iterates over the collection calling a `#each` method
+Enumerator that iterates the collection calling a `#each` method
 (by default) or calling a method specified as an argument.
 
 ```ruby
@@ -185,7 +185,7 @@ end
 
 ### Setting Enumerator's size
 
-When Enumerator iterates over a finite collection with predefined size
+When Enumerator iterates a finite collection with predefined size
 then `Enumerator#size` should return it as well.
 
 The Enumerable's methods check whether a method `#size` is implemented
